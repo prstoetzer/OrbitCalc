@@ -1,0 +1,9 @@
+'OATAN2 : atan2(V,W) -> A   (radians -Pi..Pi)
+'In: V=y  W=x   Out: A=angle
+Rad
+If W>0:Then tan^-1 (V/W)->A:Return:IfEnd
+If W<0 And V>=0:Then tan^-1 (V/W)+Pi->A:Return:IfEnd
+If W<0 And V<0:Then tan^-1 (V/W)-Pi->A:Return:IfEnd
+If W=0 And V>0:Then Pi/2->A:Return:IfEnd
+If W=0 And V<0:Then -Pi/2->A:Return:IfEnd
+0->A

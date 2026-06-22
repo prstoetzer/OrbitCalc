@@ -1,0 +1,55 @@
+'Program: OSCLOC   Casio BASIC  fx-9750GIII
+'OSCARLOCATOR - EQX crossings for one UTC day.
+'Outputs a table; press EXE to advance pages.
+'Listing notation:
+'  ->  is the assign arrow (the -> key)
+'  _   is the Disp/pause triangle command
+'  Locate c,r,X  prints X at column c,row r
+'
+"OSCARLOCATOR"_
+"EQX LON +E/-W"?->L
+"NODE 1=A 2=D"?->N
+"MONTH"?->O
+"DAY"?->D
+"EQX HOUR"?->H
+"EQX MIN"?->M
+"PERIOD MIN"?->P
+"ADV DEG W"?->V
+H*60+M->T
+Int (T/P)->K
+T-K*P->U
+L+K*V->W
+Do:If W>180:Then W-360->W:IfEnd:LpWhile W>180
+Do:If W<=(-180):Then W+360->W:IfEnd:LpWhile W<=(-180)
+ClrText
+Locate 1,1,"OSCARLOCATOR"
+Locate 1,2,O
+Locate 3,2,"/"
+Locate 4,2,D
+If N=1:Then Locate 7,2,"ASC":IfEnd
+If N<>1:Then Locate 7,2,"DES":IfEnd
+Locate 1,3,"OR TIME   LON"
+0->I
+3->Y
+Lbl 1
+If U>=1440:Then Goto 9:IfEnd
+Y+1->Y
+If Y>7:Then _:ClrText:Locate 1,1,"OR TIME   LON":2->Y:IfEnd
+Int (U/60)->A
+U-A*60->B
+Locate 1,Y,I
+Locate 4,Y,A
+Locate 6,Y,":"
+Locate 7,Y,Int (B)
+Locate 13,Y,Abs W
+If W>=0:Then Locate 20,Y,"E":IfEnd
+If W<0:Then Locate 20,Y,"W":IfEnd
+U+P->U
+W-V->W
+Do:If W>180:Then W-360->W:IfEnd:LpWhile W>180
+Do:If W<=(-180):Then W+360->W:IfEnd:LpWhile W<=(-180)
+I+1->I
+Goto 1
+Lbl 9
+_
+"DONE"
