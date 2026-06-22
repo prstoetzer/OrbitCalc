@@ -1,0 +1,86 @@
+'Program: OSUN   Casio BASIC  fx-9750GIII
+'Sun position + satellite eclipse. Shows Sun az/el for your QTH,
+'day/twilight/night, whether the satellite is sunlit or in
+'Earth's shadow now, and the next sunlit<->eclipse transition.
+'
+'REQUIRES sub-programs: OSUBPT OATAN2 OJD OCAL OSUNEC
+'List 1: orbit consts + 11=obsLat 12=obsLon (rad)
+'List 4 scratch: [10]=nowJD [12]=toff
+'  Sun ECI in [80..82]; GMST-rotated Sun ECEF in [90..92]
+'  [93]=Sun el [94]=Sun az  [95]=lit flag
+'Eclipse test done in ECEF (sat from OSUBPT is ECEF; we rotate
+'the Sun to ECEF by GMST, so both share a frame).
+'Only I,J,N,S,T safe (OSUBPT/OSUNEC clobber others; we stash all
+'results in List 4 immediately).
+Rad
+"OSUN"
+"INC"?->List 4[50]
+"ECC"?->List 4[51]
+"RAAN"?->List 4[52]
+"ARGP"?->List 4[53]
+"MA"?->List 4[54]
+"MM REV/D"?->List 4[55]
+"EPOCH UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:"S"?->S
+Prog "OJD":J->List 1[9]
+"NOW UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:0->S
+Prog "OJD":J->List 4[10]
+"LAT +N/-S"?->T:T*Pi/180->List 1[11]
+"LON +E/-W"?->T:T*Pi/180->List 1[12]
+List 4[50]*Pi/180->List 1[1]
+List 4[52]*Pi/180->List 1[2]
+List 4[53]*Pi/180->List 1[3]
+List 4[54]*Pi/180->List 1[4]
+List 4[55]*2*Pi/86400->List 1[5]
+(398600.4418/(List 1[5])^2)^(1/3)->List 1[6]
+List 4[51]->List 1[10]
+List 1[6]*(1-List 4[51]^2)->T
+1.5*1.08262668E-3*(6378.137/T)^2*List 1[5]->S
+-S*cos List 1[1]->List 1[7]
+S*(2-2.5*(sin List 1[1])^2)->List 1[8]
+0->List 4[12]
+Lbl 1
+List 4[10]+List 4[12]/1440->List 4[14]
+List 4[14]->T:Prog "OSUNANG"     'fills [93]=el [94]=az
+List 4[14]->T:Prog "OECL"        'fills [95]=lit
+Cls
+List 4[14]->J:Prog "OCAL"
+Locate 1,1,"SUN"
+Locate 5,1,H
+Locate 7,1,":"
+Locate 8,1,N
+Locate 13,1,"T+"
+Locate 15,1,List 4[12]
+Locate 1,2,"El"
+Locate 4,2,Int (List 4[93]*180/Pi)
+Locate 9,2,"Az"
+Locate 12,2,Int (List 4[94]*180/Pi)
+If List 4[93]>=0:Then Locate 1,3,"DAY":IfEnd
+If List 4[93]<0 And List 4[93]>-0.10472:Then Locate 1,3,"TWILIGHT":IfEnd
+If List 4[93]<=-0.10472:Then Locate 1,3,"NIGHT":IfEnd
+If List 4[95]=1:Then Locate 1,4,"SAT SUNLIT":IfEnd
+If List 4[95]=0:Then Locate 1,4,"SAT ECLIPSE":IfEnd
+'next transition (scan up to 200 x 30s)
+List 4[95]->N
+0->List 4[96]
+For 1->I To 200
+List 4[14]+I*30/86400->T:Prog "OECL"
+If List 4[95]<>N:Then List 4[14]+I*30/86400->List 4[97]:1->List 4[96]:Break:IfEnd
+Next
+If List 4[96]=1:Then
+List 4[97]->J:Prog "OCAL"
+If N=1:Then Locate 1,5,"->ECL":Else Locate 1,5,"->SUN":IfEnd
+Locate 7,5,H
+Locate 9,5,":"
+Locate 10,5,N
+IfEnd
+Locate 1,7,"+ - step  EXIT quit"
+Getkey->Z
+If Z=27:Then List 4[12]+1->List 4[12]:IfEnd
+If Z=37:Then List 4[12]+10->List 4[12]:IfEnd
+If Z=38:Then List 4[12]-1->List 4[12]:IfEnd
+If Z=47:Then Goto 9:IfEnd
+Goto 1
+Lbl 9
+"73"

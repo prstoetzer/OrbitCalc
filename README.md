@@ -50,6 +50,23 @@ A full graphical satellite tracker for the **ClockworkPi PicoCalc** in MMBasic
 6. **World map** with your location and the **footprints** of all satellites,
    with single-step and auto-advancing animation
 
+### OSCARMAP (graphical, PicoCalc only)
+A live, polar **OSCARLOCATOR** in MMBasic: an azimuthal-equidistant world map
+centred on your hemisphere's pole, with embedded vector coastlines, a lat/lon
+graticule, the satellite's equator-crossing-anchored ground-track arc, the live
+sub-satellite point riding that arc, the satellite footprint, and a range circle
+over your QTH — plus live Az/El/range read-outs. See
+`mmbasic/OSCARMAP-README.md`.
+
+### CardSat-style feature programs (all platforms)
+Four planning tools inspired by [CardSat](https://github.com/prstoetzer/CardSat),
+on PicoCalc (MMBasic), CASIO BASIC, and Casio Python: a **standalone Doppler
+display** (uplink/downlink shift, range-rate, passband walk, Doppler curve), a
+**pass-detail elevation plot** (AOS/TCA/LOS, max elevation), a **Sun & eclipse**
+screen (Sun az/el, day/night, satellite sunlit vs. in shadow, with a timeline),
+and a **mutual-window finder** (co-visibility windows for two stations). These
+are display/planning tools — no radio control. See `FEATURES-CARDSAT.md`.
+
 ---
 
 ## Platforms & files
@@ -58,13 +75,29 @@ A full graphical satellite tracker for the **ClockworkPi PicoCalc** in MMBasic
 |---|---|---|
 | MicroPython (desktop / MCU) | `micropython/` | `orbitcalc.py`, `oscarlocator.py` |
 | Casio fx-9750GIII (Python + Casio BASIC) | `casio-fx9750giii/` | `oc*.py`, `OC*.txt`, `OSCLOC.txt`, sub-programs, `CASIO-NOTES.md` |
-| MMBasic (PicoMite / PicoCalc) | `mmbasic/` | `orbitcalc.bas`, `oscarlocator.bas`, **`SATTRACK.bas`**, `sats.dat.sample` |
+| MMBasic (PicoMite / PicoCalc) | `mmbasic/` | `orbitcalc.bas`, `oscarlocator.bas`, **`SATTRACK.bas`**, **`OSCARMAP.bas`**, `sats.dat.sample`, `coastdata.inc` |
 | OPL — Psion Series 5 (EPOC32) | `opl-series5/` | `ORBCALC.opl`, `OSCARLOC.opl` |
 | OPL — Psion Series 3c (SIBO) | `opl-series3c/` | `ORBCALC.opl`, `OSCARLOC.opl` |
 | GW-BASIC / BASICA / PC-BASIC | `gwbasic/` | `ORBCALC.BAS`, `OSCARLOC.BAS` |
 | BBC BASIC (BBCSDL / Brandy / Acorn) | `bbcbasic/` | `ORBCALC.BBC`, `OSCARLOC.BBC` |
 
 See each folder's notes, and the platform sections below.
+
+---
+
+## Screenshots
+
+Example outputs from the two graphical PicoCalc programs (320×320). These are
+**renders** from each program's exact draw logic + verified orbit math, not
+device captures — see `screenshots/README.md` for the caveat.
+
+OSCARMAP — live polar OSCARLOCATOR:
+
+![OSCARMAP](screenshots/oscarmap-live-sequence.png)
+
+SATTRACK — multi-screen tracker:
+
+![SATTRACK](screenshots/sattrack-all-screens.png)
 
 ---
 

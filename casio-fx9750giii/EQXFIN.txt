@@ -1,0 +1,38 @@
+'EQXFIN : find equator crossing at/just before ref JD
+'In:  T = reference JD ; List 1[13]=hemi ; List 4[11]=period(min)
+'Out: List 4[50] = equator-crossing JD
+'Ascending node if north hemi, descending if south.
+'Calls OSUBPT (clobbers P,Q,A,B..Z except I,J,N,S,T). Loop
+'state kept in Lists and safe letters only.
+Rad
+1->N:If List 1[13]=0:Then 0->N:IfEnd   'N=asc flag
+60/86400->List 4[55]                    'step = 1 min (JD)
+T->List 4[56]                           'tref
+List 4[56]-(List 4[11]+5)/1440->List 4[51]   'cursor = tref-period-5min
+999->List 4[52]                         'prevlat sentinel
+List 4[56]->List 4[50]                   'default = tref
+Lbl 1
+If List 4[51]>=List 4[56]:Then Return:IfEnd
+List 4[51]->T:Prog "OSUBPT"              'P=lat Q=lon
+If List 4[52]=999:Then Goto 3:IfEnd
+0->S
+If N=1 And List 4[52]<0 And P>=0:Then 1->S:IfEnd
+If N=0 And List 4[52]>0 And P<=0:Then 1->S:IfEnd
+If S=0:Then Goto 3:IfEnd
+'bisection between cursor-step and cursor
+List 4[51]-List 4[55]->List 4[53]        'a0
+List 4[51]->List 4[54]                   'a1
+0->I
+Lbl 2
+(List 4[53]+List 4[54])/2->T:Prog "OSUBPT"
+0->S:If P>=0:Then 1->S:IfEnd             'S = (lat>=0)
+If S=N:Then (List 4[53]+List 4[54])/2->List 4[54]:IfEnd
+If S=(1-N):Then (List 4[53]+List 4[54])/2->List 4[53]:IfEnd
+I+1->I
+If I<28:Then Goto 2:IfEnd
+(List 4[53]+List 4[54])/2->List 4[50]
+Return
+Lbl 3
+P->List 4[52]                            'prevlat = lat
+List 4[51]+List 4[55]->List 4[51]        'cursor += step
+Goto 1

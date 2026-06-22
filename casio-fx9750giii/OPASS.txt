@@ -1,0 +1,113 @@
+'Program: OPASS   Casio BASIC  fx-9750GIII
+'Pass-detail elevation plot. Draws the elevation-vs-time curve
+'for the next (or current) pass of one satellite on the 127x63
+'graphics screen, with AOS/TCA/LOS read-outs.
+'
+'REQUIRES sub-programs: OSUBPT OATAN2 OJD OCAL OLOOK
+'List 1: orbit consts + 11=obsLat 12=obsLon (rad)
+'List 4 scratch: [10]=nowJD [60]=aos [61]=tca [62]=los [63]=maxel
+'  [64]=prev px [65]=prev py [66]=found
+'Only I,J,N,S,T safe (OSUBPT/OLOOK clobber the rest).
+Rad
+"OPASS"
+"INC"?->List 4[50]
+"ECC"?->List 4[51]
+"RAAN"?->List 4[52]
+"ARGP"?->List 4[53]
+"MA"?->List 4[54]
+"MM REV/D"?->List 4[55]
+"EPOCH UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:"S"?->S
+Prog "OJD":J->List 1[9]
+"NOW UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:0->S
+Prog "OJD":J->List 4[10]
+"LAT +N/-S"?->T:T*Pi/180->List 1[11]
+"LON +E/-W"?->T:T*Pi/180->List 1[12]
+List 4[50]*Pi/180->List 1[1]
+List 4[52]*Pi/180->List 1[2]
+List 4[53]*Pi/180->List 1[3]
+List 4[54]*Pi/180->List 1[4]
+List 4[55]*2*Pi/86400->List 1[5]
+(398600.4418/(List 1[5])^2)^(1/3)->List 1[6]
+List 4[51]->List 1[10]
+List 1[6]*(1-List 4[51]^2)->T
+1.5*1.08262668E-3*(6378.137/T)^2*List 1[5]->S
+-S*cos List 1[1]->List 1[7]
+S*(2-2.5*(sin List 1[1])^2)->List 1[8]
+'--- find AOS ---
+0->List 4[66]
+List 4[10]->T:Prog "OLOOK"
+If P>=0:Then List 4[10]->List 4[60]:1->List 4[66]:IfEnd
+If List 4[66]=0:Then
+List 4[10]->List 4[70]
+Lbl 1
+List 4[70]->T:Prog "OLOOK"
+If P>=0:Then
+List 4[70]-30/86400->List 4[71]:List 4[70]->List 4[72]
+For 1->I To 25
+(List 4[71]+List 4[72])/2->T:Prog "OLOOK"
+If P>=0:Then (List 4[71]+List 4[72])/2->List 4[72]:Else (List 4[71]+List 4[72])/2->List 4[71]:IfEnd
+Next
+List 4[72]->List 4[60]:1->List 4[66]
+IfEnd
+List 4[70]+30/86400->List 4[70]
+If List 4[66]=0 And List 4[70]<List 4[10]+14:Then Goto 1:IfEnd
+IfEnd
+If List 4[66]=0:Then "NO PASS 14D":Stop:IfEnd
+'--- find LOS ---
+List 4[60]+30/86400->List 4[70]
+Lbl 2
+List 4[70]->T:Prog "OLOOK"
+List 4[70]+30/86400->List 4[70]
+If P>=0 And List 4[70]<List 4[60]+0.02:Then Goto 2:IfEnd
+List 4[70]->List 4[62]
+'--- find TCA (ternary search) ---
+List 4[60]->List 4[71]:List 4[62]->List 4[72]
+For 1->I To 40
+List 4[71]+(List 4[72]-List 4[71])/3->T:Prog "OLOOK":P->List 4[73]
+List 4[72]-(List 4[72]-List 4[71])/3->T:Prog "OLOOK":P->List 4[74]
+If List 4[73]<List 4[74]:Then List 4[71]+(List 4[72]-List 4[71])/3->List 4[71]:Else List 4[72]-(List 4[72]-List 4[71])/3->List 4[72]:IfEnd
+Next
+(List 4[71]+List 4[72])/2->List 4[61]
+List 4[61]->T:Prog "OLOOK":P->List 4[63]
+'--- draw ---
+ViewWindow 0,127,0,0,62,0
+Cls
+'plot box: x 18..122, y(screen) top=6 bottom=46  -> el 0..90
+F-Line 18,62-6,18,62-46
+F-Line 18,62-46,122,62-46
+'gridlines 30/60/90
+For 1->I To 3
+62-(6+(46-6)*(I*30)/90)->S
+F-Line 18,S,122,S
+Next
+'curve
+0->N
+For 0->I To 52
+List 4[60]+(List 4[62]-List 4[60])*I/52->T:Prog "OLOOK"
+P->S:If S<0:Then 0->S:IfEnd
+18+I*104/52->J
+62-(6+(46-6)*(S*180/Pi)/90)->S
+If N=1:Then F-Line List 4[64],List 4[65],J,S:IfEnd
+J->List 4[64]:S->List 4[65]:1->N
+Next
+'TCA marker
+18+Int ((List 4[61]-List 4[60])/(List 4[62]-List 4[60])*104)->S
+F-Line S,62-6,S,62-46
+'read-outs
+List 4[60]->J:Prog "OCAL"
+Locate 1,7,"AOS"
+Locate 5,7,H
+Locate 7,7,":"
+Locate 8,7,N
+List 4[62]->J:Prog "OCAL"
+Locate 12,7,"LOS"
+Locate 16,7,H
+Locate 18,7,N
+Locate 1,8,"MaxEl"
+Locate 7,8,Int (List 4[63]*180/Pi)
+Locate 12,8,"Dur"
+Locate 16,8,Int ((List 4[62]-List 4[60])*1440)
+Getkey->Z
+"73"

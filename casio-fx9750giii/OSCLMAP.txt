@@ -1,0 +1,148 @@
+'Program: OSCLMAP   Casio BASIC  fx-9750GIII
+'Live polar OSCARLOCATOR on the 127x63 graphics screen.
+'Single-hemisphere azimuthal-equidistant: pole of your
+'hemisphere at the centre, the EQUATOR at the rim. Shows the
+'ground track (computed from elements), the live satellite
+'dot, and a range circle over your QTH. No footprint, by
+'design (keeps the small screen readable).
+'
+'REQUIRES sub-programs: OSUBPT OATAN2 OJD OCAL PROJ EQXFIN
+'List 1 = orbit consts: 1=I0 2=O0 3=G0 4=Q0 5=N0 6=A0
+'  7=RD 8=PD 9=J9 10=ecc 11=obsLat 12=obsLon 13=hemi(1/0)
+'List 4 = working/loop state (see PROJ/EQXFIN headers)
+'  [1]=CX [2]=CY [3]=RR  [10]=nowJD [11]=period(min)
+'  [12]=toff(min) [13]=step(min) [14]=displayed JD
+'  [31..35]=PROJ in/out  [50]=eqxJD  [60]=subLat [61]=subLon
+'  [70..74]=polyline prev px,py,ok and pen state
+'Note: OSUBPT clobbers most letters; only I,J,N,S,T are safe
+'as loop/scratch in this caller.
+Rad
+40->List 4[1]:31->List 4[2]:30->List 4[3]
+"OSCARLOC MAP"
+"INC"?->I:I->List 4[80]
+"ECC"?->List 4[81]
+"RAAN"?->List 4[82]
+"ARGP"?->List 4[83]
+"MA"?->List 4[84]
+"MM REV/D"?->List 4[85]
+"EPOCH UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:"S"?->S
+Prog "OJD":J->List 1[9]
+"NOW UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:0->S
+Prog "OJD":J->List 4[10]
+"LAT +N/-S"?->List 4[86]
+"LON +E/-W"?->List 4[87]
+List 4[86]*Pi/180->List 1[11]
+List 4[87]*Pi/180->List 1[12]
+1->List 1[13]:If List 4[86]<0:Then 0->List 1[13]:IfEnd
+'--- derive secular-J2 orbit constants into List 1 ---
+List 4[80]*Pi/180->List 1[1]
+List 4[82]*Pi/180->List 1[2]
+List 4[83]*Pi/180->List 1[3]
+List 4[84]*Pi/180->List 1[4]
+List 4[85]*2*Pi/86400->List 1[5]
+(398600.4418/(List 1[5])^2)^(1/3)->List 1[6]
+List 4[81]->List 1[10]
+List 1[6]*(1-List 4[81]^2)->T
+1.5*1.08262668E-3*(6378.137/T)^2*List 1[5]->S
+-S*cos List 1[1]->List 1[7]
+S*(2-2.5*(sin List 1[1])^2)->List 1[8]
+1440/List 4[85]->List 4[11]
+0->List 4[12]:2->List 4[13]
+'================= LIVE LOOP =================
+Lbl 1
+List 4[10]+List 4[12]/1440->List 4[14]
+ViewWindow 0,127,0,0,62,0
+Cls
+'--- rim = equator (24-gon) ---
+0->S
+For 0->I To 360 Step 15
+List 4[1]+List 4[3]*sin (I*Pi/180)->List 4[71]
+List 4[2]+List 4[3]*cos (I*Pi/180)->List 4[72]
+If S=1:Then F-Line List 4[73],62-List 4[74],List 4[71],62-List 4[72]:IfEnd
+List 4[71]->List 4[73]:List 4[72]->List 4[74]:1->S
+Next
+'--- lat circles 30 & 60 of this hemisphere ---
+For 1->J To 2
+30*J->T:If List 1[13]=0:Then -30*J->T:IfEnd
+0->N
+For 0->I To 360 Step 20
+T*Pi/180->List 4[31]:I*Pi/180->List 4[32]:Prog "PROJ"
+If N=1 And List 4[35]=1 And List 4[70]=1:Then F-Line List 4[73],62-List 4[74],List 4[33],62-List 4[34]:IfEnd
+List 4[33]->List 4[73]:List 4[34]->List 4[74]:List 4[35]->List 4[70]:1->N
+Next
+Next
+'--- meridian spokes (pole->equator) ---
+80->T:If List 1[13]=0:Then -80->T:IfEnd
+For 0->I To 270 Step 90
+T*Pi/180->List 4[31]:I*Pi/180->List 4[32]:Prog "PROJ"
+List 4[33]->List 4[73]:List 4[34]->List 4[74]
+0->List 4[31]:I*Pi/180->List 4[32]:Prog "PROJ"
+F-Line List 4[73],62-List 4[74],List 4[33],62-List 4[34]
+Next
+'--- range circle over QTH (3000 km) ---
+3000/6378.137->List 4[75]
+0->N
+For 0->I To 360 Step 18
+I*Pi/180->T
+sin^-1 (sin (List 1[11])*cos (List 4[75])+cos (List 1[11])*sin (List 4[75])*cos T)->List 4[31]
+sin T*sin (List 4[75])*cos (List 1[11])->V
+cos (List 4[75])-sin (List 1[11])*sin (List 4[31])->W
+Prog "OATAN2"
+List 1[12]+A->List 4[32]
+Prog "PROJ"
+If N=1 And List 4[35]=1 And List 4[70]=1:Then F-Line List 4[73],62-List 4[74],List 4[33],62-List 4[34]:IfEnd
+List 4[33]->List 4[73]:List 4[34]->List 4[74]:List 4[35]->List 4[70]:1->N
+Next
+'--- ground track from equator crossing ---
+List 4[14]->T:Prog "EQXFIN"
+0->N
+For 0->I To 40
+List 4[50]+(I*(List 4[11]/40))/1440->T
+Prog "OSUBPT"
+P->List 4[31]:Q->List 4[32]:Prog "PROJ"
+If N=1 And List 4[35]=1 And List 4[70]=1:Then F-Line List 4[73],62-List 4[74],List 4[33],62-List 4[34]:IfEnd
+List 4[33]->List 4[73]:List 4[34]->List 4[74]:List 4[35]->List 4[70]:1->N
+Next
+'--- QTH cross ---
+List 1[11]->List 4[31]:List 1[12]->List 4[32]:Prog "PROJ"
+If List 4[35]=1:Then
+PlotOn List 4[33],62-List 4[34]
+PlotOn List 4[33]-1,62-List 4[34]
+PlotOn List 4[33]+1,62-List 4[34]
+PlotOn List 4[33],62-List 4[34]-1
+PlotOn List 4[33],62-List 4[34]+1
+IfEnd
+'--- live satellite dot ---
+List 4[14]->T:Prog "OSUBPT"
+P->List 4[60]:Q->List 4[61]
+P->List 4[31]:Q->List 4[32]:Prog "PROJ"
+If List 4[35]=1:Then
+For -1->I To 1
+For -1->J To 1
+PlotOn List 4[33]+I,62-List 4[34]+J
+Next
+Next
+IfEnd
+'--- readout ---
+Text 1,72,"T+"
+Text 1,84,List 4[12]
+Text 13,72,Int (Abs (List 4[60]*180/Pi))
+If List 4[60]>=0:Then Text 13,92,"N":IfEnd
+If List 4[60]<0:Then Text 13,92,"S":IfEnd
+Text 25,72,Int (Abs (List 4[61]*180/Pi))
+If List 4[61]>=0:Then Text 25,92,"E":IfEnd
+If List 4[61]<0:Then Text 25,92,"W":IfEnd
+Text 57,1,"+/- F/S H EXIT"
+'--- keys ---
+Getkey->Z
+If Z=27:Then List 4[12]+List 4[13]->List 4[12]:IfEnd
+If Z=38:Then List 4[12]-List 4[13]->List 4[12]:IfEnd
+If Z=79:Then List 4[13]+2->List 4[13]:IfEnd
+If Z=69 And List 4[13]>1:Then List 4[13]-1->List 4[13]:IfEnd
+If Z=39:Then 1-List 1[13]->List 1[13]:IfEnd
+If Z=47:Then Goto 9:IfEnd
+Goto 1
+Lbl 9
+"73"
