@@ -67,7 +67,7 @@ def loadsat():
     WG = EL[3] * DEG
     WM = EL[4] * DEG
     WN = EL[5] * TWOPI / 86400.0
-    WJ = jd(*EP)
+    WJ = jd(EP[0], EP[1], EP[2], EP[3], EP[4], EP[5])
     WA = (MU / (WN * WN)) ** (1.0 / 3.0)
     p = WA * (1 - WE * WE)
     f = 1.5 * J2 * (ERAD / p) ** 2 * WN
@@ -216,8 +216,9 @@ def main():
         else:
             lo += 1.0; la += 0.5
         OBLAT = la * DEG; OBLON = lo * DEG
-    for i, nm in enumerate(["INC", "ECC", "RAAN", "ARGP", "MA", "MM"]):
-        EL[i] = ask(nm, EL[i])
+    _names = ["INC", "ECC", "RAAN", "ARGP", "MA", "MM"]
+    for i in range(6):
+        EL[i] = ask(_names[i], EL[i])
     FDN = ask("Downlink MHz", FDN)
     FUP = ask("Uplink MHz", FUP)
     loadsat()

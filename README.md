@@ -15,7 +15,10 @@ mean-element propagator** with a Kepler solver — small enough to type into a
 
 ## What's here
 
-Two console programs, ported to many dialects, plus one graphical app:
+Two console programs, ported to many dialects, plus graphical apps and feature
+tools. **For a complete, program-by-program reference — every input, output, and
+control on every platform — see [`PROGRAMS.md`](PROGRAMS.md).** The summary
+below is the quick tour.
 
 ### OrbitCalc (console)
 Prompts for the seven bulletin fields (INCLINATION, ECCENTRICITY,

@@ -18,22 +18,55 @@ planning; refresh elements every few days.
 - `oceqx.py`   — 10-day reference-orbit EQX table (first asc-node crossing
                  per UTC day; descending node if your latitude is south)
 - `oscloc.py`  — OSCARLOCATOR: one day's equatorial crossings from one EQX
+- `oscarloc_map.py` — live graphical polar OSCARLOCATOR (casioplot, 128×64):
+                 equator rim, 30°/60° lat circles, ground-track arc, live sat
+                 dot, range circle, text read-out. See `OSCLMAP-README.md`.
+- `doppler.py` — standalone Doppler display (shift, range-rate, tiny curve)
+- `passplot.py`— pass-detail elevation plot (AOS/TCA/LOS, max El, duration)
+- `sunecl.py`  — Sun az/el + satellite sunlit/eclipse with a timeline
+- `mutual.py`  — co-visibility window finder for two stations (text)
 - These are split because the fx-9750GIII Python editor and RAM are tight;
   keeping passes and EQX in separate files keeps each well within limits.
 - Output columns are narrowed for the 21-char screen.
+
+### Casio Python compatibility notes
+The stock Casio Python is **MicroPython 1.9.4** (an old, trimmed build). The
+programs here deliberately avoid constructs that aren't reliably present:
+- **no `enumerate`** — element entry uses an explicit `for i in range(6)` over a
+  names list;
+- **no argument unpacking** (`jd(*EP)`) — arguments are passed explicitly;
+- **no f-strings** — output uses `%` formatting.
+`getkey()` is used when available (live programs) with an `input()` fallback so
+they still run on the calculator's iostream-only Python and on desktop CPython.
 
 ## Casio BASIC files
 Main programs:
 - `OCPASS` — next 10 passes (2 screen lines per pass)
 - `OCEQX`  — 10-day EQX reference-orbit table
 - `OSCLOC` — OSCARLOCATOR table
+- `OSCLMAP`— live graphical polar OSCARLOCATOR (127×63). See `OSCLMAP-README.md`.
+- `ODOPLR` — standalone Doppler display (text read-out)
+- `OPASS`  — pass-detail elevation plot (graphical)
+- `OSUN`   — Sun az/el + satellite sunlit/eclipse (text)
+- `OMUTUAL`— co-visibility window finder for two stations (text)
 
-Shared sub-programs (REQUIRED — store all of them):
+Shared sub-programs (REQUIRED — store all your main programs' listed deps):
 - `OJD`    — Gregorian date/time -> Julian Date
 - `OCAL`   — Julian Date -> calendar
 - `OATAN2` — two-argument arctangent
 - `OSUBPT` — satellite ECI/ECEF position + sub-point
-- `OLOOK`  — observer look angles (calls OSUBPT)
+- `OLOOK`  — observer look angles + range (calls OSUBPT)
+- `PROJ`   — single-hemisphere projection (OSCLMAP)
+- `EQXFIN` — equator-crossing finder (OSCLMAP)
+- `OSUNEC` — low-precision Sun position in ECI (OSUN)
+- `OSUNANG`— Sun look angles for the observer (OSUN; calls OSUNEC)
+- `OECL`   — sunlit/eclipse cylindrical-shadow test (OSUN; calls OSUBPT, OSUNEC)
+
+The feature programs (`OSCLMAP`, `ODOPLR`, `OPASS`, `OSUN`, `OMUTUAL`) keep
+orbit constants in **List 1** and working state in **List 4**. Because
+`OSUBPT`/`OLOOK`/`OSUNEC` overwrite almost every single-letter variable, the
+callers use only **I, J, N, S, T** for loop counters/scratch and stash all other
+values in List 4 — see each file's header for the exact slot map.
 
 ### Casio BASIC notation in the listings
 - `->` is the assign/store arrow key.
