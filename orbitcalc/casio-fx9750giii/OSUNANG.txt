@@ -1,0 +1,35 @@
+'OSUNANG : Sun look angles for observer
+'In:  T = JD ; List 1[11]=obsLat 12=obsLon (rad)
+'Out: List 4[93]=Sun elevation(rad)  List 4[94]=Sun azimuth(rad)
+'Calls OSUNEC (Sun ECI). Rotates Sun to ECEF by GMST, then
+'topocentric ENU, same as OLOOK. Safe temps I,J,N,S,T + Lists.
+Rad
+Prog "OSUNEC"               'List 4[80..82] = Sun ECI
+'GMST
+(T-2451545)/36525->S
+280.46061837+360.98564736629*(T-2451545)+0.000387933*S*S->N
+N-360*Int (N/360)->N
+If N<0:Then N+360->N:IfEnd
+N*Pi/180->N                 'theta = GMST (rad)
+'rotate ECI->ECEF
+cos N*List 4[80]+sin N*List 4[81]->List 4[90]
+-sin N*List 4[80]+cos N*List 4[81]->List 4[91]
+List 4[82]->List 4[92]
+'observer ECEF
+cos (List 1[11])->S
+6378.137*S*cos (List 1[12])->List 4[98]
+6378.137*S*sin (List 1[12])->List 4[99]
+6378.137*sin (List 1[11])->List 4[100]
+'topocentric vector
+List 4[90]-List 4[98]->List 4[101]
+List 4[91]-List 4[99]->List 4[102]
+List 4[92]-List 4[100]->List 4[103]
+'ENU using lat/lon
+sin (List 1[11])*cos (List 1[12])*List 4[101]+sin (List 1[11])*sin (List 1[12])*List 4[102]-cos (List 1[11])*List 4[103]->List 4[104]   'south
+-sin (List 1[12])*List 4[101]+cos (List 1[12])*List 4[102]->List 4[105]   'east
+cos (List 1[11])*cos (List 1[12])*List 4[101]+cos (List 1[11])*sin (List 1[12])*List 4[102]+sin (List 1[11])*List 4[103]->List 4[106]  'up
+sqrt (List 4[101]^2+List 4[102]^2+List 4[103]^2)->S
+sin^-1 (List 4[106]/S)->List 4[93]
+List 4[105]->V:-List 4[104]->W:Prog "OATAN2"
+A->List 4[94]
+If List 4[94]<0:Then List 4[94]+2*Pi->List 4[94]:IfEnd

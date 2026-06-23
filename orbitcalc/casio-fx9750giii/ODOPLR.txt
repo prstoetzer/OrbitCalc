@@ -1,0 +1,89 @@
+'Program: ODOPLR   Casio BASIC  fx-9750GIII
+'Standalone Doppler display. Shows uplink/downlink Doppler
+'shift for one satellite from orbital elements. Planning tool
+'- does NOT control a radio. Range-rate by 1-second finite
+'difference (two OLOOK calls).
+'
+'REQUIRES sub-programs: OSUBPT OATAN2 OJD OCAL OLOOK
+'List 1: 1=I0 2=O0 3=G0 4=Q0 5=N0 6=A0 7=RD 8=PD 9=J9 10=ecc
+'        11=obsLat 12=obsLon (rad)
+'List 4 scratch: [10]=nowJD [12]=toff [20]=Fdn [21]=Fup
+'  [30]=r0 [31]=r1 [32]=rangerate [33]=range
+'Only I,J,N,S,T safe as scratch (OSUBPT/OLOOK clobber others).
+Rad
+299792.458->List 4[40]   'c, km/s
+"ODOPLR"
+"INC"?->List 4[50]
+"ECC"?->List 4[51]
+"RAAN"?->List 4[52]
+"ARGP"?->List 4[53]
+"MA"?->List 4[54]
+"MM REV/D"?->List 4[55]
+"EPOCH UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:"S"?->S
+Prog "OJD":J->List 1[9]
+"NOW UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:0->S
+Prog "OJD":J->List 4[10]
+"LAT +N/-S"?->T:T*Pi/180->List 1[11]
+"LON +E/-W"?->T:T*Pi/180->List 1[12]
+"DOWNLINK MHZ"?->List 4[20]
+"UPLINK MHZ"?->List 4[21]
+'--- derive constants ---
+List 4[50]*Pi/180->List 1[1]
+List 4[52]*Pi/180->List 1[2]
+List 4[53]*Pi/180->List 1[3]
+List 4[54]*Pi/180->List 1[4]
+List 4[55]*2*Pi/86400->List 1[5]
+(398600.4418/(List 1[5])^2)^(1/3)->List 1[6]
+List 4[51]->List 1[10]
+List 1[6]*(1-List 4[51]^2)->T
+1.5*1.08262668E-3*(6378.137/T)^2*List 1[5]->S
+-S*cos List 1[1]->List 1[7]
+S*(2-2.5*(sin List 1[1])^2)->List 1[8]
+0->List 4[12]
+Lbl 1
+List 4[10]+List 4[12]/1440->T
+'--- elevation/azimuth/range at T ---
+Prog "OLOOK"
+R->List 4[33]:P->List 4[34]:Q->List 4[35]
+'--- range at T-1s and T+1s for range-rate ---
+List 4[10]+List 4[12]/1440-1/86400->T:Prog "OLOOK":R->List 4[30]
+List 4[10]+List 4[12]/1440+1/86400->T:Prog "OLOOK":R->List 4[31]
+(List 4[31]-List 4[30])/2->List 4[32]   'km/s
+Cls
+List 4[10]+List 4[12]/1440->J:Prog "OCAL"
+Locate 1,1,"DOP "
+Locate 5,1,H
+Locate 7,1,":"
+Locate 8,1,N
+Locate 13,1,"T+"
+Locate 15,1,List 4[12]
+Locate 1,2,"El"
+Locate 4,2,Int (List 4[34]*180/Pi)
+Locate 9,2,"R"
+Locate 11,2,Int (List 4[33])
+Locate 1,3,"rr"
+Locate 4,3,List 4[32]
+Locate 1,4,"DN"
+'downlink shift = -f*1e6*rr/c  (Hz)
+Int (-List 4[20]*1000000*List 4[32]/List 4[40])->S
+Locate 4,4,S
+Locate 12,4,"Hz"
+Locate 1,5,"UP"
+Int (-List 4[21]*1000000*List 4[32]/List 4[40])->S
+Locate 4,5,S
+Locate 12,5,"Hz"
+'total passband walk
+Int (Abs (List 4[20]*1000000*List 4[32]/List 4[40])+Abs (List 4[21]*1000000*List 4[32]/List 4[40]))->S
+Locate 1,6,"Walk"
+Locate 6,6,S
+Locate 1,7,"+ - step  EXIT quit"
+Getkey->Z
+If Z=27:Then List 4[12]+0.5->List 4[12]:IfEnd
+If Z=37:Then List 4[12]+2->List 4[12]:IfEnd
+If Z=38:Then List 4[12]-0.5->List 4[12]:IfEnd
+If Z=47:Then Goto 9:IfEnd
+Goto 1
+Lbl 9
+"73"

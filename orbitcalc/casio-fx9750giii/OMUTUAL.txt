@@ -1,0 +1,86 @@
+'Program: OMUTUAL   Casio BASIC  fx-9750GIII
+'Co-visibility window finder. Lists the next windows when BOTH
+'your QTH and a remote station can see the satellite at once,
+'with duration and peak elevation at each end. Text output.
+'
+'REQUIRES sub-programs: OSUBPT OATAN2 OJD OCAL OLOOK
+'List 1: orbit consts + 11=lat 12=lon (rad) for whichever
+'        station OLOOK is currently evaluating (we swap).
+'List 4: [10]=nowJD ; station coords stashed in
+'  [70]=lat1 [71]=lon1 [72]=lat2 [73]=lon2 ; [74]=minel(rad)
+'  [60]=aos [61]=pk1 [62]=pk2 [63]=inwin [64]=nwin [65]=row
+'Only I,J,N,S,T safe (OLOOK clobbers others; e1/e2 stashed at once).
+Rad
+"OMUTUAL"
+"INC"?->List 4[50]
+"ECC"?->List 4[51]
+"RAAN"?->List 4[52]
+"ARGP"?->List 4[53]
+"MA"?->List 4[54]
+"MM REV/D"?->List 4[55]
+"EPOCH UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:"S"?->S
+Prog "OJD":J->List 1[9]
+"NOW UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:0->S
+Prog "OJD":J->List 4[10]
+"YOUR LAT"?->T:T*Pi/180->List 4[70]
+"YOUR LON"?->T:T*Pi/180->List 4[71]
+"REMOTE LAT"?->T:T*Pi/180->List 4[72]
+"REMOTE LON"?->T:T*Pi/180->List 4[73]
+"MIN EL DEG"?->T:T*Pi/180->List 4[74]
+List 4[50]*Pi/180->List 1[1]
+List 4[52]*Pi/180->List 1[2]
+List 4[53]*Pi/180->List 1[3]
+List 4[54]*Pi/180->List 1[4]
+List 4[55]*2*Pi/86400->List 1[5]
+(398600.4418/(List 1[5])^2)^(1/3)->List 1[6]
+List 4[51]->List 1[10]
+List 1[6]*(1-List 4[51]^2)->T
+1.5*1.08262668E-3*(6378.137/T)^2*List 1[5]->S
+-S*cos List 1[1]->List 1[7]
+S*(2-2.5*(sin List 1[1])^2)->List 1[8]
+Cls
+Locate 1,1,"MUTUAL WINDOWS"
+Locate 1,2,"D/M  AOS-LOS  pA pB"
+0->List 4[63]:0->List 4[64]:3->List 4[65]
+List 4[10]->List 4[66]                 'scan cursor
+Lbl 1
+If List 4[66]>=List 4[10]+4:Then Goto 9:IfEnd
+If List 4[64]>=6:Then Goto 9:IfEnd
+'elev at station 1
+List 4[70]->List 1[11]:List 4[71]->List 1[12]
+List 4[66]->T:Prog "OLOOK":P->List 4[67]   'e1
+'elev at station 2
+List 4[72]->List 1[11]:List 4[73]->List 1[12]
+List 4[66]->T:Prog "OLOOK":P->List 4[68]   'e2
+0->N
+If List 4[67]>=List 4[74] And List 4[68]>=List 4[74]:Then 1->N:IfEnd
+If N=1 And List 4[63]=0:Then
+List 4[66]->List 4[60]:1->List 4[63]:-9->List 4[61]:-9->List 4[62]
+IfEnd
+If List 4[63]=1:Then
+If List 4[67]>List 4[61]:Then List 4[67]->List 4[61]:IfEnd
+If List 4[68]>List 4[62]:Then List 4[68]->List 4[62]:IfEnd
+If N=0:Then
+List 4[60]->J:Prog "OCAL"
+Locate 1,List 4[65],D
+Locate 3,List 4[65],"/"
+Locate 4,List 4[65],M
+Locate 7,List 4[65],H
+Locate 9,List 4[65],N
+List 4[66]->J:Prog "OCAL"
+Locate 12,List 4[65],H
+Locate 14,List 4[65],N
+Locate 16,List 4[65],Int (List 4[61]*180/Pi)
+Locate 19,List 4[65],Int (List 4[62]*180/Pi)
+List 4[65]+1->List 4[65]
+0->List 4[63]:List 4[64]+1->List 4[64]
+IfEnd
+IfEnd
+List 4[66]+30/86400->List 4[66]
+Goto 1
+Lbl 9
+If List 4[64]=0:Then Locate 1,3,"NONE IN 4 DAYS":IfEnd
+Getkey->Z
+"73"

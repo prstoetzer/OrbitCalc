@@ -1,0 +1,43 @@
+'OSUBPT : satellite position at T (JD)
+'Out: P=lat(rad) Q=lon(rad)  X,Y,Z=ECEF(km)
+'List 1: 1=I0 2=O0 3=G0 4=Q0 5=N0 6=A0 7=RD 8=PD 9=J9 10=ecc
+'Letters used: T P Q X Y Z V W A(atan2) and temps B C D E F G H K L M O R U
+Rad
+(T-List 1[9])*86400->D
+List 1[4]+List 1[5]*D->M
+M-2*Pi*Int (M/(2*Pi))->M
+List 1[2]+List 1[7]*D->O
+List 1[3]+List 1[8]*D->G
+M->E
+0->K
+Lbl 1
+(E-List 1[10]*sin E-M)/(1-List 1[10]*cos E)->L
+E-L->E
+K+1->K
+If Abs L<1E-11:Then Goto 2:IfEnd
+If K<40:Then Goto 1:IfEnd
+Lbl 2
+List 1[6]*(cos E-List 1[10])->H
+List 1[6]*sqrt (1-List 1[10]^2)*sin E->L
+sqrt (H^2+L^2)->R
+L->V:H->W:Prog "OATAN2"
+A+G->U
+cos O->B:sin O->C
+cos U->F:sin U->H
+cos List 1[1]->K:sin List 1[1]->L
+R*(B*F-C*H*K)->X
+R*(C*F+B*H*K)->Y
+R*(H*L)->Z
+(T-2451545)/36525->D
+280.46061837+360.98564736629*(T-2451545)+0.000387933*D*D->G
+G-360*Int (G/360)->G
+If G<0:Then G+360->G:IfEnd
+G*Pi/180->G
+cos G->B:sin G->C
+B*X+C*Y->M
+-C*X+B*Y->O
+Z->L
+sqrt (M^2+O^2)->R
+Z->V:R->W:Prog "OATAN2":A->P
+O->V:M->W:Prog "OATAN2":A->Q
+M->X:O->Y:L->Z

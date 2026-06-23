@@ -1,0 +1,370 @@
+REM OrbitCalc for BBC BASIC
+REM Next-10-passes and 10-day reference-orbit (EQX) tables
+REM from AMSAT mean orbital elements. Secular-J2 propagation.
+REM Tested with BBC BASIC for Windows / SDL (BBCSDL) and
+REM compatible with BBC BASIC (Z80/ARM) given enough memory.
+REM Angles internally in radians; trig set to kR where needed.
+:
+REM ---- constants ----
+kP = 4 * ATN(1)
+kP2 = 2 * kP
+kD = kP / 180
+kR = 180 / kP
+MU = 398600.4418
+RE = 6378.137
+J2 = 1.08262668E-3
+:
+PRINT "=== OrbitCalc (BBC BASIC) ==="
+PROCelements
+PROCnow
+PRINT "1) Next 10 passes"
+PRINT "2) 10-day reference orbit (EQX)"
+INPUT "Choose 1 or 2: " CH$
+PROClocation
+IF CH$ = "1" THEN PROCpasses ELSE PROCeqxtable
+END
+:
+REM ================= input =================
+DEF PROCelements
+PRINT "Enter elements (AMSAT bulletin):"
+INPUT "  INCLINATION (deg): " INC
+INPUT "  ECCENTRICITY: " ECC
+INPUT "  RA_OF_ASC_NODE (deg): " RAAN
+INPUT "  ARG_OF_PERICENTER (deg): " ARGP
+INPUT "  MEAN_ANOMALY (deg): " MA
+INPUT "  MEAN_MOTION (rev/day): " MM
+PRINT "  EPOCH (UTC):"
+INPUT "    Year: " EY
+INPUT "    Month: " EMO
+INPUT "    Day: " ED
+INPUT "    Hour: " EH
+INPUT "    Min: " EMI
+INPUT "    Sec: " ES
+EPJD = FNjd(EY, EMO, ED, EH, EMI, ES)
+PROCsetsat(INC, ECC, RAAN, ARGP, MA, MM, EPJD)
+ENDPROC
+:
+DEF PROCnow
+PRINT "Current UTC date/time:"
+INPUT "  Year: " NY
+INPUT "  Month: " NMO
+INPUT "  Day: " ND
+INPUT "  Hour: " NH
+INPUT "  Min: " NMI
+NOWJD = FNjd(NY, NMO, ND, NH, NMI, 0)
+ENDPROC
+:
+DEF PROClocation
+LOCAL G$
+INPUT "Maidenhead grid? (y/n): " G$
+IF LEFT$(G$,1)="y" OR LEFT$(G$,1)="Y" THEN PROCgrid ELSE PROClatlon
+ENDPROC
+:
+DEF PROCgrid
+LOCAL G$
+INPUT "  Grid: " G$
+PROCmaiden(G$)
+ENDPROC
+:
+DEF PROClatlon
+INPUT "  Latitude (deg,+N): " OLAT
+INPUT "  Longitude (deg,+E): " OLON
+OLAT = OLAT * kD
+OLON = OLON * kD
+ENDPROC
+:
+REM ============ orbital setup =============
+DEF PROCsetsat(inc, ecc, raan, argp, ma, mmd, ep)
+SI0 = inc * kD
+SE = ecc
+SR0 = raan * kD
+SP0 = argp * kD
+SM0 = ma * kD
+SN0 = mmd * kP2 / 86400
+SEP = ep
+SA = (MU / (SN0 * SN0)) ^ (1/3)
+LOCAL p, f, ci, si
+p = SA * (1 - SE * SE)
+f = 1.5 * J2 * (RE / p) ^ 2 * SN0
+ci = COS(SI0)
+si = SIN(SI0)
+SRD = -f * ci
+SPD = f * (2 - 2.5 * si * si)
+ENDPROC
+:
+REM ===== Julian date from calendar =======
+DEF FNjd(y, mo, d, h, mi, s)
+LOCAL a, b
+IF mo <= 2 THEN y = y - 1 : mo = mo + 12
+a = INT(y / 100)
+b = 2 - a + INT(a / 4)
+= INT(365.25 * (y + 4716)) + INT(30.6001 * (mo + 1)) + d + b - 1524.5 + (h + mi / 60 + s / 3600) / 24
+:
+REM ===== GMST (radians) ==================
+DEF FNgmst(jd)
+LOCAL t, g
+t = (jd - 2451545) / 36525
+g = 280.46061837 + 360.98564736629 * (jd - 2451545) + 0.000387933 * t * t - t * t * t / 38710000
+g = g - 360 * INT(g / 360)
+IF g < 0 THEN g = g + 360
+= g * kD
+:
+REM ===== Kepler solver ===================
+DEF FNkepler(m, e)
+LOCAL x, dx, k
+x = m
+FOR k = 1 TO 50
+  dx = (x - e * SIN(x) - m) / (1 - e * COS(x))
+  x = x - dx
+  IF ABS(dx) < 1E-12 THEN k = 50
+NEXT
+= x
+:
+REM ===== ECI position at jd ==============
+REM results in GX,GY,GZ
+DEF PROCeci(jd)
+LOCAL dt, m, raan, argp, ee, xo, yo, u, r
+LOCAL co, so, cu, su, ci, si
+dt = (jd - SEP) * 86400
+m = SM0 + SN0 * dt
+raan = SR0 + SRD * dt
+argp = SP0 + SPD * dt
+m = m - kP2 * INT(m / kP2)
+ee = FNkepler(m, SE)
+xo = SA * (COS(ee) - SE)
+yo = SA * SQR(1 - SE * SE) * SIN(ee)
+u = FNatan2(yo, xo) + argp
+r = SQR(xo * xo + yo * yo)
+co = COS(raan) : so = SIN(raan)
+cu = COS(u) : su = SIN(u)
+ci = COS(SI0) : si = SIN(SI0)
+GX = r * (co * cu - so * su * ci)
+GY = r * (so * cu + co * su * ci)
+GZ = r * (su * si)
+ENDPROC
+:
+REM ===== ECEF position at jd =============
+REM results in EX,EY,EZ
+DEF PROCecef(jd)
+LOCAL g, cg, sg
+PROCeci(jd)
+g = FNgmst(jd)
+cg = COS(g) : sg = SIN(g)
+EX = cg * GX + sg * GY
+EY = -sg * GX + cg * GY
+EZ = GZ
+ENDPROC
+:
+REM ===== sub-point ======================
+REM results in SLAT,SLON (radians)
+DEF PROCsubpt(jd)
+PROCecef(jd)
+SLON = FNatan2(EY, EX)
+SLAT = FNatan2(EZ, SQR(EX * EX + EY * EY))
+ENDPROC
+:
+REM ===== look angles ====================
+REM results in LEL,LAZ (radians)
+DEF PROClook(jd, la, lo)
+LOCAL clat, slat, clon, slon, ox, oy, oz
+LOCAL rx, ry, rz, s, e, zz, rng
+PROCecef(jd)
+clat = COS(la) : slat = SIN(la)
+clon = COS(lo) : slon = SIN(lo)
+ox = RE * clat * clon
+oy = RE * clat * slon
+oz = RE * slat
+rx = EX - ox : ry = EY - oy : rz = EZ - oz
+s = slat * clon * rx + slat * slon * ry - clat * rz
+e = -slon * rx + clon * ry
+zz = clat * clon * rx + clat * slon * ry + slat * rz
+rng = SQR(rx * rx + ry * ry + rz * rz)
+LEL = ASN(zz / rng)
+LAZ = FNatan2(e, -s)
+IF LAZ < 0 THEN LAZ = LAZ + kP2
+ENDPROC
+:
+REM ===== two-arg atan2 ==================
+DEF FNatan2(y, x)
+IF x > 0 THEN = ATN(y / x)
+IF x < 0 AND y >= 0 THEN = ATN(y / x) + kP
+IF x < 0 AND y < 0 THEN = ATN(y / x) - kP
+IF x = 0 AND y > 0 THEN = kP / 2
+IF x = 0 AND y < 0 THEN = -kP / 2
+= 0
+:
+REM ===== Maidenhead -> OLAT,OLON ========
+DEF PROCmaiden(g$)
+LOCAL u$, lo, la
+u$ = FNupper(g$)
+lo = (ASC(MID$(u$,1,1)) - 65) * 20 - 180
+la = (ASC(MID$(u$,2,1)) - 65) * 10 - 90
+lo = lo + (ASC(MID$(u$,3,1)) - 48) * 2
+la = la + (ASC(MID$(u$,4,1)) - 48)
+IF LEN(u$) >= 6 THEN lo = lo + (ASC(MID$(u$,5,1)) - 65) / 12 + 1/24 : la = la + (ASC(MID$(u$,6,1)) - 65) / 24 + 1/48 ELSE lo = lo + 1 : la = la + 0.5
+OLAT = la * kD
+OLON = lo * kD
+ENDPROC
+:
+DEF FNupper(a$)
+LOCAL i, c, r$
+r$ = ""
+FOR i = 1 TO LEN(a$)
+  c = ASC(MID$(a$, i, 1))
+  IF c >= 97 AND c <= 122 THEN c = c - 32
+  r$ = r$ + CHR$(c)
+NEXT
+= r$
+:
+REM ===== calendar from jd ===============
+REM results in CY,CMO,CD,CH,CMI,CS
+DEF PROCcal(jd)
+LOCAL z, f, al, a, b, c, dd, e, day, secs
+jd = jd + 0.5
+z = INT(jd) : f = jd - z
+IF z < 2299161 THEN a = z ELSE al = INT((z - 1867216.25) / 36524.25) : a = z + 1 + al - INT(al / 4)
+b = a + 1524
+c = INT((b - 122.1) / 365.25)
+dd = INT(365.25 * c)
+e = INT((b - dd) / 30.6001)
+day = b - dd - INT(30.6001 * e) + f
+IF e < 14 THEN CMO = e - 1 ELSE CMO = e - 13
+IF CMO > 2 THEN CY = c - 4716 ELSE CY = c - 4715
+CD = INT(day)
+secs = (day - CD) * 86400
+CH = INT(secs / 3600) : secs = secs - CH * 3600
+CMI = INT(secs / 60)
+CS = secs - CMI * 60
+ENDPROC
+:
+REM ===== format helpers =================
+DEF FN2(n)
+IF n < 10 THEN = "0" + STR$(n)
+= STR$(n)
+:
+DEF FNlonfmt(lond)
+IF lond >= 0 THEN = FNr1(lond) + " E"
+= FNr1(-lond) + " W"
+:
+DEF FNr1(x)
+LOCAL w, frac
+w = INT(x)
+frac = INT((x - w) * 10 + 0.5)
+IF frac >= 10 THEN w = w + 1 : frac = 0
+= STR$(w) + "." + STR$(frac)
+:
+REM ===== pass prediction ================
+DEF PROCpasses
+LOCAL step, jd, endd, inpass, npass
+LOCAL aos, los, tca, maxel, azaos, aztca, azlos
+LOCAL a0, a1, mm, k, t0, t1, ml, mr, ell, elr
+step = 30 / 86400
+jd = NOWJD
+endd = NOWJD + 12
+inpass = 0
+npass = 0
+PRINT "DATE  AOS   LOS   El  AzA/AzT/AzL"
+REPEAT
+  PROClook(jd, OLAT, OLON)
+  IF LEL >= 0 AND inpass = 0 THEN PROCaosref(jd, step) : inpass = 1 : maxel = -kP
+  IF inpass = 1 THEN PROCmidpass(jd, step)
+  jd = jd + step
+UNTIL jd >= endd OR npass >= 10
+ENDPROC
+:
+DEF PROCaosref(jd, step)
+LOCAL a0, a1, k, m
+a0 = jd - step : a1 = jd
+FOR k = 1 TO 25
+  m = (a0 + a1) / 2
+  PROClook(m, OLAT, OLON)
+  IF LEL >= 0 THEN a1 = m ELSE a0 = m
+NEXT
+PAOS = a1
+PROClook(PAOS, OLAT, OLON)
+PAZA = LAZ
+ENDPROC
+:
+DEF PROCmidpass(jd, step)
+LOCAL a0, a1, k, m, t0, t1, ml, mr, ell, elr
+PROClook(jd, OLAT, OLON)
+IF LEL > maxel THEN maxel = LEL : PTCA = jd
+IF LEL >= 0 THEN ENDPROC
+REM LOS refine
+a0 = jd - step : a1 = jd
+FOR k = 1 TO 25
+  m = (a0 + a1) / 2
+  PROClook(m, OLAT, OLON)
+  IF LEL >= 0 THEN a0 = m ELSE a1 = m
+NEXT
+PLOS = a0
+PROClook(PLOS, OLAT, OLON)
+PAZL = LAZ
+REM TCA refine (golden-section style trisection)
+t0 = PTCA - step : t1 = PTCA + step
+FOR k = 1 TO 40
+  ml = t0 + (t1 - t0) / 3
+  mr = t1 - (t1 - t0) / 3
+  PROClook(ml, OLAT, OLON) : ell = LEL
+  PROClook(mr, OLAT, OLON) : elr = LEL
+  IF ell < elr THEN t0 = ml ELSE t1 = mr
+NEXT
+PTCA = (t0 + t1) / 2
+PROClook(PTCA, OLAT, OLON)
+maxel = LEL
+PAZT = LAZ
+PROCcal(PAOS)
+PRINT FN2(CD); "/"; FN2(CMO); " "; FN2(CH); ":"; FN2(CMI);
+PROCcal(PLOS)
+PRINT "-"; FN2(CH); ":"; FN2(CMI); " ";
+PRINT STR$(INT(maxel * kR + 0.5)); " ";
+PRINT STR$(INT(PAZA * kR + 0.5)); "/"; STR$(INT(PAZT * kR + 0.5)); "/"; STR$(INT(PAZL * kR + 0.5))
+inpass = 0
+npass = npass + 1
+ENDPROC
+:
+REM ===== reference orbit EQX ============
+DEF PROCeqxtable
+LOCAL south, asc, day0, k, ds
+IF OLAT < 0 THEN south = 1 ELSE south = 0
+IF south = 1 THEN asc = 0 ELSE asc = 1
+PROCcal(NOWJD)
+day0 = FNjd(CY, CMO, CD, 0, 0, 0)
+IF south = 1 THEN PRINT "First DESCENDING-node EQX/UTC day" ELSE PRINT "First ASCENDING-node EQX/UTC day"
+PRINT "DATE  UTC    EQX-LON"
+FOR k = 0 TO 9
+  ds = day0 + k
+  PROCfindeqx(ds, asc)
+  IF EQXOK = 1 THEN PROCcal(EQXJD) : PRINT FN2(CD); "/"; FN2(CMO); " "; FN2(CH); ":"; FN2(CMI); " "; FNlonfmt(EQXLON * kR)
+NEXT
+ENDPROC
+:
+DEF PROCfindeqx(ds, asc)
+LOCAL step, jd, endd, prevlat, a0, a1, k, m, cross
+step = 60 / 86400
+jd = ds
+endd = ds + 1
+prevlat = 999
+EQXOK = 0
+REPEAT
+  PROCsubpt(jd)
+  IF prevlat <> 999 THEN
+    IF asc = 1 THEN cross = (prevlat < 0 AND SLAT >= 0) ELSE cross = (prevlat > 0 AND SLAT <= 0)
+    IF cross THEN
+      a0 = jd - step : a1 = jd
+      FOR k = 1 TO 40
+        m = (a0 + a1) / 2
+        PROCsubpt(m)
+        IF (SLAT >= 0) = (asc = 1) THEN a1 = m ELSE a0 = m
+      NEXT
+      m = (a0 + a1) / 2
+      PROCsubpt(m)
+      EQXJD = m
+      EQXLON = SLON
+      EQXOK = 1
+    ENDIF
+  ENDIF
+  prevlat = SLAT
+  jd = jd + step
+UNTIL jd >= endd OR EQXOK = 1
+ENDPROC

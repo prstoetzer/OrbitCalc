@@ -1,0 +1,64 @@
+REM OSCARLOCATOR for BBC BASIC
+REM EQX crossings for one UTC day from one EQX + period + advance.
+REM Longitude +E / -W; input accepts a trailing E or W or a sign.
+:
+kP = 4 * ATN(1)
+:
+PRINT "=== OSCARLOCATOR (BBC BASIC) ==="
+INPUT "EQX longitude (e.g. 111.6W or -111.6): " L$
+LON0 = FNparselon(L$)
+INPUT "Node 1=Ascending 2=Descending: " ND
+INPUT "Month: " MO
+INPUT "Day: " DY
+INPUT "EQX hour (UTC): " HH
+INPUT "EQX min (UTC): " MM
+INPUT "Orbital period (min): " PER
+INPUT "Advance per orbit (deg West): " ADV
+:
+IF ND = 1 THEN NODE$ = "ASC" ELSE NODE$ = "DESC"
+T0 = HH * 60 + MM
+K = INT(T0 / PER)
+T = T0 - K * PER
+LON = FNwrap(LON0 + K * ADV)
+:
+PRINT FNz2(MO); "/"; FNz2(DY); "  "; NODE$
+PRINT "ORB  UTC    EQX-LON"
+N = 0
+REPEAT
+  H = INT(T / 60)
+  M = INT(T - H * 60)
+  PRINT FNz2(N); "  "; FNz2(H); ":"; FNz2(M); "  "; FNlonfmt(FNwrap(LON))
+  T = T + PER
+  LON = FNwrap(LON - ADV)
+  N = N + 1
+UNTIL T >= 1440
+END
+:
+DEF FNwrap(x)
+WHILE x > 180 : x = x - 360 : ENDWHILE
+WHILE x <= -180 : x = x + 360 : ENDWHILE
+= x
+:
+DEF FNparselon(a$)
+LOCAL c$, sign, b$
+b$ = a$
+c$ = RIGHT$(b$, 1)
+sign = 1
+IF c$ = "W" OR c$ = "w" THEN sign = -1 : b$ = LEFT$(b$, LEN(b$) - 1)
+IF c$ = "E" OR c$ = "e" THEN b$ = LEFT$(b$, LEN(b$) - 1)
+= sign * VAL(b$)
+:
+DEF FNz2(n)
+IF n < 10 THEN = "0" + STR$(n)
+= STR$(n)
+:
+DEF FNlonfmt(lond)
+IF lond >= 0 THEN = FNr1(lond) + " E"
+= FNr1(-lond) + " W"
+:
+DEF FNr1(x)
+LOCAL w, frac
+w = INT(x)
+frac = INT((x - w) * 10 + 0.5)
+IF frac >= 10 THEN w = w + 1 : frac = 0
+= STR$(w) + "." + STR$(frac)

@@ -1,0 +1,34 @@
+'OECL : is the satellite sunlit? (cylindrical shadow test)
+'In:  T = JD
+'Out: List 4[95] = 1 sunlit, 0 eclipse
+'Done in ECEF: OSUBPT gives sat ECEF (X,Y,Z); we rotate the Sun
+'to ECEF by GMST too, so both share the frame. Lit if the sat is
+'on the sunward side, or its distance from the Earth-Sun axis
+'exceeds Earth's radius.  Safe temps I,J,N,S,T + Lists.
+Rad
+Prog "OSUBPT"               'X,Y,Z = sat ECEF ; also sets P,Q
+X->List 4[110]:Y->List 4[111]:Z->List 4[112]
+Prog "OSUNEC"               'List 4[80..82] = Sun ECI
+(T-2451545)/36525->S
+280.46061837+360.98564736629*(T-2451545)+0.000387933*S*S->N
+N-360*Int (N/360)->N
+If N<0:Then N+360->N:IfEnd
+N*Pi/180->N
+cos N*List 4[80]+sin N*List 4[81]->List 4[90]
+-sin N*List 4[80]+cos N*List 4[81]->List 4[91]
+List 4[82]->List 4[92]
+'unit Sun vector
+sqrt (List 4[90]^2+List 4[91]^2+List 4[92]^2)->S
+List 4[90]/S->List 4[113]
+List 4[91]/S->List 4[114]
+List 4[92]/S->List 4[115]
+'dot of sat with sun-hat
+List 4[110]*List 4[113]+List 4[111]*List 4[114]+List 4[112]*List 4[115]->List 4[116]
+1->List 4[95]
+If List 4[116]>0:Then Return:IfEnd
+'perp distance from earth-sun axis
+List 4[110]-List 4[116]*List 4[113]->List 4[117]
+List 4[111]-List 4[116]*List 4[114]->List 4[118]
+List 4[112]-List 4[116]*List 4[115]->List 4[119]
+sqrt (List 4[117]^2+List 4[118]^2+List 4[119]^2)->S
+If S>6378.137:Then 1->List 4[95]:Else 0->List 4[95]:IfEnd

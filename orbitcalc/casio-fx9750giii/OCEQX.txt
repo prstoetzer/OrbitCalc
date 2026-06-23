@@ -1,0 +1,104 @@
+'OCEQX  fx-9750GIII Casio BASIC
+'OrbitCalc EQX: 10-day reference-orbit table.
+'First ascending-node EQX per UTC day (descending if
+'observer latitude is south). Lon shown +E/-W.
+'Needs sub-programs: OSUBPT OATAN2 OJD OCAL
+'List 1 = orbit consts; List 2 = main loop state.
+Rad
+"OrbitCalc EQX"
+"INC"?->I
+"ECC"?->C
+"RAAN"?->O
+"ARGP"?->G
+"MA"?->Q
+"MM rev/day"?->F
+"EPOCH UTC"
+"YR"?->Y
+"MON"?->M
+"DAY"?->D
+"HR"?->H
+"MIN"?->N
+"SEC"?->S
+Prog "OJD"
+J->List 1[9]
+"NOW UTC"
+"YR"?->Y
+"MON"?->M
+"DAY"?->D
+0->H:0->N:0->S
+Prog "OJD"
+J->List 2[1]
+"LAT +N/-S"?->T
+1->List 2[2]
+If T<0:Then 0->List 2[2]:IfEnd
+I*Pi/180->List 1[1]
+O*Pi/180->List 1[2]
+G*Pi/180->List 1[3]
+Q*Pi/180->List 1[4]
+F*2*Pi/86400->List 1[5]
+(398600.4418/(List 1[5])^2)^(1/3)->List 1[6]
+List 1[6]*(1-C*C)->A
+1.5*1.08262668E-3*(6378.137/A)^2*List 1[5]->B
+-B*cos (I*Pi/180)->List 1[7]
+B*(2-2.5*(sin (I*Pi/180))^2)->List 1[8]
+C->List 1[10]
+ClrText
+Locate 1,1,"EQX REF ORBITS"
+If List 2[2]=1:Then Locate 1,2,"ASC NODE":IfEnd
+If List 2[2]=0:Then Locate 1,2,"DESC NODE":IfEnd
+Locate 1,3,"dd/mm UTC   LON"
+3->List 2[3]
+Int (List 2[1]+0.5)-0.5->List 2[4]
+0->List 2[5]
+Lbl 100
+If List 2[5]>=10:Then Goto 199:IfEnd
+List 2[4]+List 2[5]->List 2[6]
+List 2[6]->T
+List 2[6]+1->List 2[7]
+999->List 2[8]
+Lbl 110
+If T>=List 2[7]:Then Goto 190:IfEnd
+Prog "OSUBPT"
+P->List 2[9]
+If List 2[8]=999:Then List 2[9]->List 2[8]:T+1/1440->T:Goto 110:IfEnd
+0->List 2[10]
+If List 2[2]=1 And List 2[8]<0 And List 2[9]>=0:Then 1->List 2[10]:IfEnd
+If List 2[2]=0 And List 2[8]>0 And List 2[9]<=0:Then 1->List 2[10]:IfEnd
+If List 2[10]=0:Then List 2[9]->List 2[8]:T+1/1440->T:Goto 110:IfEnd
+T-1/1440->List 2[11]
+T->List 2[12]
+0->List 2[13]
+Lbl 120
+List 2[13]+1->List 2[13]
+(List 2[11]+List 2[12])/2->T
+Prog "OSUBPT"
+0->List 2[14]
+If P>=0 And List 2[2]=1:Then 1->List 2[14]:IfEnd
+If P<0 And List 2[2]=0:Then 1->List 2[14]:IfEnd
+If List 2[14]=1:Then T->List 2[12]:IfEnd
+If List 2[14]=0:Then T->List 2[11]:IfEnd
+If List 2[13]<34:Then Goto 120:IfEnd
+(List 2[11]+List 2[12])/2->T
+Prog "OSUBPT"
+Q->List 2[15]
+T->J
+Prog "OCAL"
+List 2[3]+1->List 2[3]
+If List 2[3]>7:Then ClrText:Locate 1,1,"dd/mm UTC   LON":2->List 2[3]:IfEnd
+Locate 1,List 2[3],D
+Locate 3,List 2[3],"/"
+Locate 4,List 2[3],M
+Locate 7,List 2[3],H
+Locate 9,List 2[3],":"
+Locate 10,List 2[3],N
+List 2[15]*180/Pi->A
+Locate 14,List 2[3],Int (Abs A*10+0.5)/10
+If A>=0:Then Locate 20,List 2[3],"E":IfEnd
+If A<0:Then Locate 20,List 2[3],"W":IfEnd
+List 2[5]+1->List 2[5]
+Goto 100
+Lbl 190
+List 2[5]+1->List 2[5]
+Goto 100
+Lbl 199
+"DONE"
