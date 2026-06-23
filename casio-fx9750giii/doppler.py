@@ -16,7 +16,7 @@ DEG = PI / 180.0
 RAD = 180.0 / PI
 MU = 398600.4418
 ERAD = 6378.137
-J2 = 1.08262668e-3
+J2 = 0.00108262668
 CK = 299792.458  # speed of light km/s
 BLACK = (0, 0, 0)
 
@@ -54,7 +54,7 @@ def kepler(m, e):
     for _ in range(40):
         dx = (x - e * math.sin(x) - m) / (1 - e * math.cos(x))
         x -= dx
-        if abs(dx) < 1e-11:
+        if abs(dx) < 0.00000000001:
             break
     return x
 
@@ -86,18 +86,31 @@ def look(j):
     yo = WA * math.sqrt(1 - WE * WE) * math.sin(ee)
     u = math.atan2(yo, xo) + ap
     r = math.sqrt(xo * xo + yo * yo)
-    co = math.cos(ra); so = math.sin(ra)
-    cu = math.cos(u); su = math.sin(u)
-    ci = math.cos(WI); si = math.sin(WI)
+    co = math.cos(ra)
+    so = math.sin(ra)
+    cu = math.cos(u)
+    su = math.sin(u)
+    ci = math.cos(WI)
+    si = math.sin(WI)
     x = r * (co * cu - so * su * ci)
     y = r * (so * cu + co * su * ci)
     z = r * (su * si)
-    g = gmst(j); cg = math.cos(g); sg = math.sin(g)
-    xe = cg * x + sg * y; ye = -sg * x + cg * y; ze = z
-    cl = math.cos(OBLAT); sl = math.sin(OBLAT)
-    col = math.cos(OBLON); sol = math.sin(OBLON)
-    ox = ERAD * cl * col; oy = ERAD * cl * sol; oz = ERAD * sl
-    rx = xe - ox; ry = ye - oy; rz = ze - oz
+    g = gmst(j)
+    cg = math.cos(g)
+    sg = math.sin(g)
+    xe = cg * x + sg * y
+    ye = -sg * x + cg * y
+    ze = z
+    cl = math.cos(OBLAT)
+    sl = math.sin(OBLAT)
+    col = math.cos(OBLON)
+    sol = math.sin(OBLON)
+    ox = ERAD * cl * col
+    oy = ERAD * cl * sol
+    oz = ERAD * sl
+    rx = xe - ox
+    ry = ye - oy
+    rz = ze - oz
     s = sl * col * rx + sl * sol * ry - cl * rz
     e = -sol * rx + col * ry
     zz = cl * col * rx + cl * sol * ry + sl * rz
@@ -119,7 +132,8 @@ def range_rate(j):
 
 def cal(j):
     j += 0.5
-    z = int(j); f = j - z
+    z = int(j)
+    f = j - z
     if z < 2299161:
         a = z
     else:
@@ -133,26 +147,30 @@ def cal(j):
     mo = e - 1 if e < 14 else e - 13
     d = int(day)
     sec = (day - d) * 86400.0
-    h = int(sec / 3600); sec -= h * 3600
+    h = int(sec / 3600)
+    sec -= h * 3600
     mi = int(sec / 60)
     return mo, d, h, mi
 
 
 def line(x0, y0, x1, y1):
-    dx = abs(x1 - x0); dy = -abs(y1 - y0)
+    dx = abs(x1 - x0)
+    dy = -abs(y1 - y0)
     sx = 1 if x0 < x1 else -1
     sy = 1 if y0 < y1 else -1
     err = dx + dy
     while True:
-        if 0 <= x0 < 128 and 0 <= y0 < 64:
+        if x0 >= 0 and x0 < 128 and y0 >= 0 and y0 < 64:
             set_pixel(x0, y0, BLACK)
         if x0 == x1 and y0 == y1:
             break
         e2 = 2 * err
         if e2 >= dy:
-            err += dy; x0 += sx
+            err += dy
+            x0 += sx
         if e2 <= dx:
-            err += dx; y0 += sy
+            err += dx
+            y0 += sy
 
 
 def draw(now, toff):
@@ -160,8 +178,8 @@ def draw(now, toff):
     clear_screen()
     el, az, rng = look(j)
     rr = range_rate(j)
-    ds = -FDN * 1e6 * rr / CK
-    us = -FUP * 1e6 * rr / CK
+    ds = -FDN * 1000000.0 * rr / CK
+    us = -FUP * 1000000.0 * rr / CK
     mo, d, h, mi = cal(j)
     draw_string(0, 0, "DOPPLER T+" + str(int(toff)), BLACK, "small")
     draw_string(0, 10, "%02d:%02dZ El%d" % (h, mi, int(el * RAD)), BLACK, "small")
@@ -172,11 +190,11 @@ def draw(now, toff):
     draw_string(0, 44, "UP %+5d Hz" % int(us), BLACK, "small")
     # tiny doppler curve across the bottom
     y0 = 60
-    mx = FDN * 1e6 * 6.0 / CK
+    mx = FDN * 1000000.0 * 6.0 / CK
     last = None
     for i in range(0, 128, 4):
         t = j + (i - 64) * 30.0 / 86400.0
-        sh = -FDN * 1e6 * range_rate(t) / CK
+        sh = -FDN * 1000000.0 * range_rate(t) / CK
         py = y0 - int(sh / mx * 3)
         if py < 56:
             py = 56
@@ -214,8 +232,10 @@ def main():
             lo += (ord(g[4]) - 65) / 12.0 + 1 / 24.0
             la += (ord(g[5]) - 65) / 24.0 + 1 / 48.0
         else:
-            lo += 1.0; la += 0.5
-        OBLAT = la * DEG; OBLON = lo * DEG
+            lo += 1.0
+            la += 0.5
+        OBLAT = la * DEG
+        OBLON = lo * DEG
     _names = ["INC", "ECC", "RAAN", "ARGP", "MA", "MM"]
     for i in range(6):
         EL[i] = ask(_names[i], EL[i])

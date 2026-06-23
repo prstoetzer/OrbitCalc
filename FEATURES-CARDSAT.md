@@ -74,8 +74,12 @@ across all three platforms within rounding:
 - **Not run on hardware.** All ports here were verified by faithful transcription
   / emulation against the reference. Nothing has been executed on a physical
   PicoCalc or fx-9750GIII. Treat the first on-device run as a shakedown:
-  - **Casio Python** `getkey()` codes vary by OS version (there's an `input()`
-    fallback so the programs still run).
+  - **Casio Python** is MicroPython 1.9.4 with a strict, cut-down parser. The
+    `.py` files here are written in a conservative dialect (plain-decimal
+    constants instead of `1e-6`-style literals, one statement per line, no
+    chained comparisons, no `enumerate`, no f-strings) so they load without a
+    bare `invalid syntax` error. `getkey()` codes also vary by OS version
+    (there's an `input()` fallback so the programs still run).
   - **Casio BASIC** text screens use `Locate`; on a 21-column screen a few
     multi-digit fields in OMUTUAL sit close together — adjust columns to taste.
   - **Interpreted = slow.** Each redraw re-runs the orbit math; expect seconds

@@ -42,7 +42,7 @@ DEG = PI / 180.0
 RAD = 180.0 / PI
 MU = 398600.4418
 ERAD = 6378.137
-J2 = 1.08262668e-3
+J2 = 0.00108262668
 
 # ---- defaults (AO-7) ----
 NHEMI = 1                 # 1 = north-centred, 0 = south
@@ -82,7 +82,7 @@ def kepler(m, e):
     for _ in range(40):
         dx = (x - e * math.sin(x) - m) / (1 - e * math.cos(x))
         x -= dx
-        if abs(dx) < 1e-11:
+        if abs(dx) < 0.00000000001:
             break
     return x
 
@@ -208,7 +208,7 @@ def project(latr, lonr):
 
 
 def plot(x, y):
-    if 0 <= x < W and 0 <= y < H:
+    if x >= 0 and x < W and y >= 0 and y < H:
         set_pixel(x, y, BLACK)
 
 

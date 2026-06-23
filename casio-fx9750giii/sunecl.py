@@ -15,7 +15,7 @@ DEG = PI / 180.0
 RAD = 180.0 / PI
 MU = 398600.4418
 ERAD = 6378.137
-J2 = 1.08262668e-3
+J2 = 0.00108262668
 AU = 149597870.7
 BLACK = (0, 0, 0)
 
@@ -51,15 +51,20 @@ def kepler(m, e):
     for _ in range(40):
         dx = (x - e * math.sin(x) - m) / (1 - e * math.cos(x))
         x -= dx
-        if abs(dx) < 1e-11:
+        if abs(dx) < 0.00000000001:
             break
     return x
 
 
 def loadsat():
     global WI, WE, WO, WG, WM, WN, WJ, WA, WRD, WPD
-    WI = EL[0] * DEG; WE = EL[1]; WO = EL[2] * DEG; WG = EL[3] * DEG
-    WM = EL[4] * DEG; WN = EL[5] * TWOPI / 86400.0; WJ = jd(EP[0], EP[1], EP[2], EP[3], EP[4], EP[5])
+    WI = EL[0] * DEG
+    WE = EL[1]
+    WO = EL[2] * DEG
+    WG = EL[3] * DEG
+    WM = EL[4] * DEG
+    WN = EL[5] * TWOPI / 86400.0
+    WJ = jd(EP[0], EP[1], EP[2], EP[3], EP[4], EP[5])
     WA = (MU / (WN * WN)) ** (1.0 / 3.0)
     p = WA * (1 - WE * WE)
     f = 1.5 * J2 * (ERAD / p) ** 2 * WN
@@ -69,13 +74,21 @@ def loadsat():
 
 def sat_eci(j):
     dt = (j - WJ) * 86400.0
-    m = WM + WN * dt; ra = WO + WRD * dt; ap = WG + WPD * dt
+    m = WM + WN * dt
+    ra = WO + WRD * dt
+    ap = WG + WPD * dt
     m = m - TWOPI * int(m / TWOPI)
     ee = kepler(m, WE)
-    xo = WA * (math.cos(ee) - WE); yo = WA * math.sqrt(1 - WE * WE) * math.sin(ee)
-    u = math.atan2(yo, xo) + ap; r = math.sqrt(xo * xo + yo * yo)
-    co = math.cos(ra); so = math.sin(ra); cu = math.cos(u); su = math.sin(u)
-    ci = math.cos(WI); si = math.sin(WI)
+    xo = WA * (math.cos(ee) - WE)
+    yo = WA * math.sqrt(1 - WE * WE) * math.sin(ee)
+    u = math.atan2(yo, xo) + ap
+    r = math.sqrt(xo * xo + yo * yo)
+    co = math.cos(ra)
+    so = math.sin(ra)
+    cu = math.cos(u)
+    su = math.sin(u)
+    ci = math.cos(WI)
+    si = math.sin(WI)
     return (r * (co * cu - so * su * ci), r * (so * cu + co * su * ci), r * (su * si))
 
 
@@ -93,16 +106,28 @@ def sun_eci(j):
 
 def sun_look(j):
     xs, ys, zs = sun_eci(j)
-    g = gmst(j); cg = math.cos(g); sg = math.sin(g)
-    xe = cg * xs + sg * ys; ye = -sg * xs + cg * ys; ze = zs
-    cl = math.cos(OBLAT); sl = math.sin(OBLAT); col = math.cos(OBLON); sol = math.sin(OBLON)
-    ox = ERAD * cl * col; oy = ERAD * cl * sol; oz = ERAD * sl
-    rx = xe - ox; ry = ye - oy; rz = ze - oz
+    g = gmst(j)
+    cg = math.cos(g)
+    sg = math.sin(g)
+    xe = cg * xs + sg * ys
+    ye = -sg * xs + cg * ys
+    ze = zs
+    cl = math.cos(OBLAT)
+    sl = math.sin(OBLAT)
+    col = math.cos(OBLON)
+    sol = math.sin(OBLON)
+    ox = ERAD * cl * col
+    oy = ERAD * cl * sol
+    oz = ERAD * sl
+    rx = xe - ox
+    ry = ye - oy
+    rz = ze - oz
     s = sl * col * rx + sl * sol * ry - cl * rz
     e = -sol * rx + col * ry
     zz = cl * col * rx + cl * sol * ry + sl * rz
     rng = math.sqrt(rx * rx + ry * ry + rz * rz)
-    el = math.asin(zz / rng); az = math.atan2(e, -s)
+    el = math.asin(zz / rng)
+    az = math.atan2(e, -s)
     if az < 0:
         az += TWOPI
     return el, az
@@ -112,34 +137,45 @@ def is_lit(j):
     sx, sy, sz = sat_eci(j)
     ux, uy, uz = sun_eci(j)
     un = math.sqrt(ux * ux + uy * uy + uz * uz)
-    ux /= un; uy /= un; uz /= un
+    ux /= un
+    uy /= un
+    uz /= un
     dotp = sx * ux + sy * uy + sz * uz
     if dotp > 0:
         return 1
-    px = sx - dotp * ux; py = sy - dotp * uy; pz = sz - dotp * uz
+    px = sx - dotp * ux
+    py = sy - dotp * uy
+    pz = sz - dotp * uz
     perp = math.sqrt(px * px + py * py + pz * pz)
     return 1 if perp > ERAD else 0
 
 
 def cal(j):
     j += 0.5
-    z = int(j); f = j - z
+    z = int(j)
+    f = j - z
     if z < 2299161:
         a = z
     else:
         al = int((z - 1867216.25) / 36524.25)
         a = z + 1 + al - int(al / 4)
-    b = a + 1524; c = int((b - 122.1) / 365.25); dd = int(365.25 * c)
-    e = int((b - dd) / 30.6001); day = b - dd - int(30.6001 * e) + f
+    b = a + 1524
+    c = int((b - 122.1) / 365.25)
+    dd = int(365.25 * c)
+    e = int((b - dd) / 30.6001)
+    day = b - dd - int(30.6001 * e) + f
     mo = e - 1 if e < 14 else e - 13
-    d = int(day); sec = (day - d) * 86400.0
-    h = int(sec / 3600); sec -= h * 3600; mi = int(sec / 60)
+    d = int(day)
+    sec = (day - d) * 86400.0
+    h = int(sec / 3600)
+    sec -= h * 3600
+    mi = int(sec / 60)
     return mo, d, h, mi
 
 
 def vline(x, y0, y1):
     for y in range(y0, y1 + 1):
-        if 0 <= x < 128 and 0 <= y < 64:
+        if x >= 0 and x < 128 and y >= 0 and y < 64:
             set_pixel(x, y, BLACK)
 
 
@@ -155,7 +191,8 @@ def draw(now, toff):
     draw_string(0, 23, "Sat: " + ("SUNLIT" if lit else "ECLIPSE"), BLACK, "small")
     # timeline next 100 min
     draw_string(0, 35, "Next 100min:", BLACK, "small")
-    y0 = 45; y1 = 53
+    y0 = 45
+    y1 = 53
     for i in range(0, 120):
         t = j + (i / 119.0) * (100.0 / 1440.0)
         if is_lit(t):
@@ -165,7 +202,8 @@ def draw(now, toff):
             # eclipse = just baseline tick
             set_pixel(4 + i, y1, BLACK)
     # next transition
-    cur = is_lit(j); tnext = None
+    cur = is_lit(j)
+    tnext = None
     for i in range(1, 220):
         tt = j + i * 30.0 / 86400.0
         if is_lit(tt) != cur:
@@ -200,13 +238,16 @@ def main():
     if len(g) >= 4:
         lo = (ord(g[0]) - 65) * 20 - 180
         la = (ord(g[1]) - 65) * 10 - 90
-        lo += (ord(g[2]) - 48) * 2; la += (ord(g[3]) - 48)
+        lo += (ord(g[2]) - 48) * 2
+        la += (ord(g[3]) - 48)
         if len(g) >= 6:
             lo += (ord(g[4]) - 65) / 12.0 + 1 / 24.0
             la += (ord(g[5]) - 65) / 24.0 + 1 / 48.0
         else:
-            lo += 1.0; la += 0.5
-        OBLAT = la * DEG; OBLON = lo * DEG
+            lo += 1.0
+            la += 0.5
+        OBLAT = la * DEG
+        OBLON = lo * DEG
     _names = ["INC", "ECC", "RAAN", "ARGP", "MA", "MM"]
     for i in range(6):
         EL[i] = ask(_names[i], EL[i])

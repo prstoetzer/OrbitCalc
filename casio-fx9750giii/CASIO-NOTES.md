@@ -30,14 +30,29 @@ planning; refresh elements every few days.
 - Output columns are narrowed for the 21-char screen.
 
 ### Casio Python compatibility notes
-The stock Casio Python is **MicroPython 1.9.4** (an old, trimmed build). The
-programs here deliberately avoid constructs that aren't reliably present:
-- **no `enumerate`** — element entry uses an explicit `for i in range(6)` over a
-  names list;
-- **no argument unpacking** (`jd(*EP)`) — arguments are passed explicitly;
-- **no f-strings** — output uses `%` formatting.
-`getkey()` is used when available (live programs) with an `input()` fallback so
-they still run on the calculator's iostream-only Python and on desktop CPython.
+The stock Casio Python is **MicroPython 1.9.4** (an old, size-optimised build
+with a cut-down parser). Its parser is stricter than desktop CPython, so the
+programs here are written in a conservative dialect that avoids constructs the
+calculator rejects — several of which raise a bare `invalid syntax` at load
+time, before the program even runs:
+
+- **No scientific-notation float literals.** `1e-11`, `1e6`, `1.08262668e-3`
+  and the like can fail to parse on this build, so all constants are written as
+  plain decimals (e.g. `0.00000000001`, `1000000.0`, `0.00108262668`).
+- **No semicolon-compound statements.** Each statement is on its own line; the
+  `a = 1; b = 2` form is avoided.
+- **No chained comparisons.** `0 <= x < 128` is written as
+  `x >= 0 and x < 128`.
+- **No `enumerate`** — element entry uses an explicit `for i in range(6)` over a
+  names list.
+- **No argument unpacking** (`jd(*EP)`) — arguments are passed explicitly.
+- **No f-strings** — output uses `%` formatting.
+
+`getkey()` is imported when available (live programs) with a fallback to `None`
+so they drop to `input()`; this keeps them runnable on the calculator's
+iostream-only Python and on desktop CPython. All five Python programs
+(`oscarloc_map.py`, `doppler.py`, `passplot.py`, `sunecl.py`, `mutual.py`) were
+re-checked after these changes and produce the same results as before.
 
 ## Casio BASIC files
 Main programs:
