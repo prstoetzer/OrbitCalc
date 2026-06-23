@@ -25,6 +25,27 @@ planning; refresh elements every few days.
 - `passplot.py`— pass-detail elevation plot (AOS/TCA/LOS, max El, duration)
 - `sunecl.py`  — Sun az/el + satellite sunlit/eclipse with a timeline
 - `mutual.py`  — co-visibility window finder for two stations (text)
+
+### Entry order (Python feature programs)
+Each of `doppler.py`, `passplot.py`, `sunecl.py`, and `mutual.py` prompts for
+**everything the prediction needs** — so they work for any satellite at any
+time, not just the AO-7 defaults. Order:
+
+1. Grid(s): one for most; `mutual.py` asks for **your grid** and the **remote
+   grid**.
+2. The six elements: INC, ECC, RAAN, ARGP, MA, MM (rev/day).
+3. **Epoch UTC** of those elements: Yr, Mo, Dy, Hr, Mi, Sec.
+4. **Now (UTC)**: Yr, Mo, Dy, Hr, Mi.
+5. Program-specific extras: `doppler.py` → downlink MHz, uplink MHz, time
+   offset; `passplot.py` → skip-ahead minutes; `sunecl.py` → time offset;
+   `mutual.py` → minimum elevation (deg).
+
+Press EXE at any prompt to accept the bracketed default. The epoch and "now"
+fields are essential: an element set is only valid relative to its epoch, and
+passes/Doppler/eclipse are all computed for the "now" you enter (plus any
+offset). Earlier versions hard-coded these to AO-7 / 2026-06-22, which made the
+feature programs unable to predict for other satellites or dates — that is
+fixed.
 - These are split because the fx-9750GIII Python editor and RAM are tight;
   keeping passes and EQX in separate files keeps each well within limits.
 - Output columns are narrowed for the 21-char screen.

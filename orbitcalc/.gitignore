@@ -1,6 +1,0 @@
-__pycache__/
-*.pyc
-_verify/__pycache__/
-*.tmp
-loc.dat
-sats.dat

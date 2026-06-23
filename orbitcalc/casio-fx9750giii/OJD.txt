@@ -1,7 +1,0 @@
-'OJD : JD from Y,M,D,H,N,S -> J
-'In: Y=year M=month D=day H=hour N=min S=sec  Out: J
-Y->A:M->B
-If B<=2:Then A-1->A:B+12->B:IfEnd
-2-Int (A/100)+Int (Int (A/100)/4)->C
-Int (365.25*(A+4716))+Int (30.6001*(B+1))+D+C-1524.5->J
-J+(H+N/60+S/3600)/24->J

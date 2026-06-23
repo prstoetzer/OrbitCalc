@@ -19,8 +19,8 @@ BLACK = (0, 0, 0)
 OBLAT = 38.9 * DEG
 OBLON = -77.0 * DEG
 EL = [101.9899, 0.0012609, 184.6033, 124.3014, 247.3322, 12.53698149]
-EP = (2026, 6, 20, 7, 46, 20.6)
-NW = (2026, 6, 22, 0, 0)
+EP = [2026, 6, 20, 7, 46, 20.6]
+NW = [2026, 6, 22, 0, 0]
 FDN = 145.95
 FUP = 435.1
 WI = WE = WO = WG = WM = WN = WJ = WA = WRD = WPD = 0.0
@@ -238,6 +238,19 @@ def main():
     _names = ["INC", "ECC", "RAAN", "ARGP", "MA", "MM"]
     for i in range(6):
         EL[i] = ask(_names[i], EL[i])
+    print("Epoch UTC (from elements):")
+    EP[0] = ask("Ep Yr", EP[0])
+    EP[1] = ask("Ep Mo", EP[1])
+    EP[2] = ask("Ep Dy", EP[2])
+    EP[3] = ask("Ep Hr", EP[3])
+    EP[4] = ask("Ep Mi", EP[4])
+    EP[5] = ask("Ep Sec", EP[5])
+    print("Now UTC:")
+    NW[0] = ask("Now Yr", NW[0])
+    NW[1] = ask("Now Mo", NW[1])
+    NW[2] = ask("Now Dy", NW[2])
+    NW[3] = ask("Now Hr", NW[3])
+    NW[4] = ask("Now Mi", NW[4])
     FDN = ask("Downlink MHz", FDN)
     FUP = ask("Uplink MHz", FUP)
     toff = ask("Time offset min", 0)
