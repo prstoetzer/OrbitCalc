@@ -1,0 +1,75 @@
+'Program: OGRID   Casio BASIC  fx-9750GIII
+'Grid <-> lat/lon and great-circle bearing/distance.
+'NOTE: the fx-9750GIII has no string-character-code function,
+'so Maidenhead grids are entered/shown as NUMERIC fields, not
+'as a 6-char string. A grid like FM18LV is entered as its
+'field/square/subsquare numbers:
+'   field lon letter A..R  -> 0..17   (F = 5)
+'   field lat letter A..R  -> 0..17   (M = 12)
+'   square lon digit 0..9               (1)
+'   square lat digit 0..9               (8)
+'   sub   lon letter a..x  -> 0..23   (L = 11)
+'   sub   lat letter a..x  -> 0..23   (V = 21)
+'Use mode 1 to turn those into lat/lon, mode 2 to turn lat/lon
+'into the field numbers, mode 3 for bearing/distance.
+'No sub-programs. Run in any angle mode (uses deg internally).
+Deg
+"OGRID"
+"MODE 1G>LL 2LL>G 3BRG"?->Z
+If Z=1:Then
+"FLD LON 0-17"?->A
+"FLD LAT 0-17"?->B
+"SQ LON 0-9"?->C
+"SQ LAT 0-9"?->D
+"SUB LON 0-23"?->I
+"SUB LAT 0-23"?->J
+A*20-180+C*2+I/12+1/24->List 4[11]
+B*10-90+D+J/24+1/48->List 4[10]
+Cls
+"LON"
+List 4[11]_/
+"LAT"
+List 4[10]_/
+Goto E
+IfEnd
+If Z=2:Then
+"LON +E"?->List 4[11]
+"LAT +N"?->List 4[10]
+List 4[11]+180->S
+List 4[10]+90->T
+Cls
+"FLD LON"
+Int (S/20)_/
+"FLD LAT"
+Int (T/10)_/
+"SQ LON"
+Int (Frac (S/20)*10)_/
+"SQ LAT"
+Int (Frac (T/10)*10)_/
+"SUB LON"
+Int (Frac (S/2)*12)_/
+"SUB LAT"
+Int (Frac T*24)_/
+Goto E
+IfEnd
+"FROM LAT"?->A
+"FROM LON"?->B
+"TO LAT"?->C
+"TO LON"?->D
+sin (D-B)*cos C->T
+cos A*sin C-sin A*cos C*cos (D-B)->N
+tan^-1 (T/N)->I
+If N<0:Then I+180->I:IfEnd
+If I<0:Then I+360->I:IfEnd
+sin A*sin C+cos A*cos C*cos (D-B)->T
+If T>1:Then 1->T:IfEnd
+If T<-1:Then -1->T:IfEnd
+cos^-1 T->S
+S*Pi/180*6371->J
+Cls
+"BEARING DEG"
+I_/
+"DIST KM"
+J_/
+Lbl E
+"73"

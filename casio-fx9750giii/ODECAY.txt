@@ -1,0 +1,43 @@
+'Program: ODECAY   Casio BASIC  fx-9750GIII
+'Element freshness & decay flag. No sub-programs. Radian mode.
+'Inputs: MM(rev/day) ECC, epoch Y/Mo/D/H/Mi, now Y/Mo/D/H/Mi.
+Rad
+"ODECAY"
+"MM REV/D"?->M
+"ECC"?->E
+"EPOCH:"
+"EY"?->A:"EMO"?->B:"ED"?->C:"EH"?->D:"EMI"?->F
+'Julian Date of epoch (G)
+A->Y:B->O
+If O<=2:Then Y-1->Y:O+12->O:IfEnd
+Int (Y/100)->H
+2-H+Int (H/4)->I
+Int (365.25*(Y+4716))+Int (30.6001*(O+1))+C+I-1524.5+(D+F/60)/24->G
+"NOW:"
+"NY"?->A:"NMO"?->B:"ND"?->C:"NH"?->D:"NMI"?->F
+A->Y:B->O
+If O<=2:Then Y-1->Y:O+12->O:IfEnd
+Int (Y/100)->H
+2-H+Int (H/4)->I
+Int (365.25*(Y+4716))+Int (30.6001*(O+1))+C+I-1524.5+(D+F/60)/24->J
+J-G->K                                'age in days
+M*2*Pi/86400->N
+(398600.4418/N^2)^(1/3)->A
+A*(1-E)-6378.137->P                    'perigee alt
+A*(1+E)-6378.137->Q                    'apogee alt
+Cls
+"AGE DAYS"
+K_/
+If K<0:Then "! NOW<EPOCH"_/:IfEnd
+If K>14:Then "! VERY STALE >14D"_/:IfEnd
+If K>5 And K<=14:Then "! STALE >5D"_/:IfEnd
+If K<=5 And K>=0:Then "FRESH ENOUGH"_/:IfEnd
+"MEAN ALT KM"
+A-6378.137_/
+"PERI ALT KM"
+P_/
+"APO ALT KM"
+Q_/
+If P<200:Then "! RAPID DECAY"_/:IfEnd
+If P>=200 And P<350:Then "! REFRESH DAILY"_/:IfEnd
+"73"

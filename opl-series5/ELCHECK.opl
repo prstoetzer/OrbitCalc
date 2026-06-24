@@ -1,0 +1,82 @@
+REM ELCHECK - OPL for Psion Series 5 (EPOC32)
+REM GP/OMM element-set sanity checker. Module: ELCHECK
+GLOBAL kP, kP2, gMU, gRE
+
+PROC main:
+  kP = PI
+  kP2 = 2.0 * kP
+  gMU = 398600.4418
+  gRE = 6378.137
+  LOCAL inc, ecc, raan, argp, ma, mm, n, a, altp, alta, nw%
+  PRINT "=== ELCHECK (Series 5) ==="
+  PRINT "INC: ";
+  INPUT inc
+  PRINT "ECC: ";
+  INPUT ecc
+  PRINT "RAAN: ";
+  INPUT raan
+  PRINT "ARGP: ";
+  INPUT argp
+  PRINT "MA: ";
+  INPUT ma
+  PRINT "MM: ";
+  INPUT mm
+  nw% = 0
+  IF inc < 0.0 OR inc > 180.0
+    PRINT "! INC out of 0..180"
+    nw% = nw% + 1
+  ENDIF
+  IF ecc < 0.0 OR ecc >= 1.0
+    PRINT "! ECC out of 0..1"
+    nw% = nw% + 1
+  ENDIF
+  IF raan < 0.0 OR raan >= 360.0
+    PRINT "! RAAN out of 0..360"
+    nw% = nw% + 1
+  ENDIF
+  IF argp < 0.0 OR argp >= 360.0
+    PRINT "! ARGP out of 0..360"
+    nw% = nw% + 1
+  ENDIF
+  IF ma < 0.0 OR ma >= 360.0
+    PRINT "! MA out of 0..360"
+    nw% = nw% + 1
+  ENDIF
+  IF mm <= 0.0
+    PRINT "! MM must be > 0"
+    PRINT "Press a key"
+    GET
+    RETURN
+  ENDIF
+  n = mm * kP2 / 86400.0
+  a = (gMU / (n * n)) ** (1.0/3.0)
+  altp = a * (1.0 - ecc) - gRE
+  alta = a * (1.0 + ecc) - gRE
+  IF altp < 0.0
+    PRINT "! Perigee below surface"
+    nw% = nw% + 1
+  ENDIF
+  IF mm > 17.5
+    PRINT "! MM very high - decay/typo?"
+    nw% = nw% + 1
+  ENDIF
+  IF mm < 0.5
+    PRINT "! MM very low - typo?"
+    nw% = nw% + 1
+  ENDIF
+  IF nw% = 0
+    PRINT "No range problems found."
+  ENDIF
+  PRINT "a=";FIX$(a,0,6);" per=";FIX$(1440.0/mm,2,7)
+  PRINT "peri=";FIX$(altp,0,6);" apo=";FIX$(alta,0,6)
+  IF mm > 11.0
+    PRINT "Looks LEO"
+  ELSEIF mm > 1.5
+    PRINT "Looks MEO"
+  ENDIF
+  IF inc > 90.0
+    PRINT "Retrograde/sun-sync-ish"
+  ENDIF
+  PRINT "Press a key"
+  GET
+ENDP

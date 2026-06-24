@@ -1,0 +1,97 @@
+'Program: OPASSC   Casio BASIC  fx-9750GIII
+'Multi-day pass calendar with a minimum max-elevation filter.
+'Lists workable passes (max-El >= threshold) over N days.
+'REQUIRES sub-programs: OSUBPT OATAN2 OJD OCAL OLOOK
+'List 1: orbit consts + 11=obsLat 12=obsLon (rad)
+'List 4: [10]=now [13]=endJD [14]=t [15]=minel [16]=line
+'  [60]=aos [62]=los [63]=mel [66]=found [70..72]=temps
+'Only I,J,N,S,T safe.
+Rad
+"OPASSC"
+"INC"?->List 4[50]
+"ECC"?->List 4[51]
+"RAAN"?->List 4[52]
+"ARGP"?->List 4[53]
+"MA"?->List 4[54]
+"MM REV/D"?->List 4[55]
+"EPOCH UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:"S"?->S
+Prog "OJD":J->List 1[9]
+"NOW UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:0->S
+Prog "OJD":J->List 4[10]
+"LAT +N/-S"?->T:T*Pi/180->List 1[11]
+"LON +E/-W"?->T:T*Pi/180->List 1[12]
+"DAYS"?->S
+List 4[10]+S->List 4[13]
+"MIN MAXEL"?->List 4[15]
+List 4[50]*Pi/180->List 1[1]
+List 4[52]*Pi/180->List 1[2]
+List 4[53]*Pi/180->List 1[3]
+List 4[54]*Pi/180->List 1[4]
+List 4[55]*2*Pi/86400->List 1[5]
+(398600.4418/(List 1[5])^2)^(1/3)->List 1[6]
+List 4[51]->List 1[10]
+List 1[6]*(1-List 4[51]^2)->T
+1.5*1.08262668E-3*(6378.137/T)^2*List 1[5]->S
+-S*cos List 1[1]->List 1[7]
+S*(2-2.5*(sin List 1[1])^2)->List 1[8]
+Cls
+"DATE AOS LOS EL"
+1->List 4[16]
+List 4[10]->List 4[14]
+Lbl 9
+'--- find next AOS from List 4[14] ---
+0->List 4[66]
+List 4[14]->T:Prog "OLOOK"
+If P>=0:Then List 4[14]->List 4[60]:1->List 4[66]:IfEnd
+If List 4[66]=0:Then
+List 4[14]->List 4[70]
+Lbl 1
+List 4[70]->T:Prog "OLOOK"
+If P>=0:Then
+List 4[70]-30/86400->List 4[71]:List 4[70]->List 4[72]
+For 1->I To 25
+(List 4[71]+List 4[72])/2->T:Prog "OLOOK"
+If P>=0:Then (List 4[71]+List 4[72])/2->List 4[72]:Else (List 4[71]+List 4[72])/2->List 4[71]:IfEnd
+Next
+List 4[72]->List 4[60]:1->List 4[66]
+IfEnd
+List 4[70]+30/86400->List 4[70]
+If List 4[66]=0 And List 4[70]<List 4[13]:Then Goto 1:IfEnd
+IfEnd
+If List 4[66]=0:Then Goto 8:IfEnd
+If List 4[60]>=List 4[13]:Then Goto 8:IfEnd
+'--- find LOS ---
+List 4[60]+30/86400->List 4[70]
+Lbl 2
+List 4[70]->T:Prog "OLOOK"
+List 4[70]+30/86400->List 4[70]
+If P>=0 And List 4[70]<List 4[60]+0.02:Then Goto 2:IfEnd
+List 4[70]->List 4[62]
+'--- max el via thirds ---
+List 4[60]->List 4[73]:List 4[62]->List 4[74]
+For 1->I To 40
+List 4[73]+(List 4[74]-List 4[73])/3->S
+List 4[74]-(List 4[74]-List 4[73])/3->T
+S->T:Prog "OLOOK":P->List 4[75]
+List 4[74]-(List 4[74]-List 4[73])/3->T:Prog "OLOOK":P->List 4[76]
+If List 4[75]<List 4[76]:Then List 4[73]+(List 4[74]-List 4[73])/3->List 4[73]:Else List 4[74]-(List 4[74]-List 4[73])/3->List 4[74]:IfEnd
+Next
+(List 4[73]+List 4[74])/2->T:Prog "OLOOK":P->List 4[63]
+If List 4[63]*180/Pi>=List 4[15]:Then
+List 4[60]->T:Prog "OCAL"
+Locate 1,List 4[16]+1,D
+Locate 3,List 4[16]+1,":"
+Locate 4,List 4[16]+1,H
+Locate 7,List 4[16]+1,N
+List 4[62]->T:Prog "OCAL"
+Locate 11,List 4[16]+1,H
+Locate 14,List 4[16]+1,Int (List 4[63]*180/Pi+0.5)
+List 4[16]+1->List 4[16]
+If List 4[16]>6:Then 1->List 4[16]:"MORE?"?->K:Cls:IfEnd
+IfEnd
+List 4[62]+60/86400->List 4[14]
+If List 4[14]<List 4[13]:Then Goto 9:IfEnd
+Lbl 8
+"73"

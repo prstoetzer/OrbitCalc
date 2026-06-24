@@ -1,0 +1,69 @@
+'Program: ONODE   Casio BASIC  fx-9750GIII
+'Equator-crossing (node) time/longitude table for the paper
+'OSCARLOCATOR board, from the live element set.
+'REQUIRES sub-programs: OSUBPT OATAN2 OJD OCAL
+'List 1: orbit consts (1=I0 2=O0 3=G0 4=Q0 5=N0 6=A0 7=RD 8=PD 9=J9 10=ecc)
+'List 4 scratch: [10]=nowJD [20]=asc [21]=cnt [22]=found
+'  [30]=prevlat [31]=j [32]=j2 [33]=a [34]=b
+'Only I,J,N,S,T safe (OSUBPT clobbers others).
+Rad
+"ONODE"
+"INC"?->List 4[50]
+"ECC"?->List 4[51]
+"RAAN"?->List 4[52]
+"ARGP"?->List 4[53]
+"MA"?->List 4[54]
+"MM REV/D"?->List 4[55]
+"EPOCH UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:"S"?->S
+Prog "OJD":J->List 1[9]
+"NOW UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:0->S
+Prog "OJD":J->List 4[10]
+"ASC 1 DESC 0"?->List 4[20]
+"HOW MANY"?->List 4[21]
+List 4[50]*Pi/180->List 1[1]
+List 4[52]*Pi/180->List 1[2]
+List 4[53]*Pi/180->List 1[3]
+List 4[54]*Pi/180->List 1[4]
+List 4[55]*2*Pi/86400->List 1[5]
+(398600.4418/(List 1[5])^2)^(1/3)->List 1[6]
+List 4[51]->List 1[10]
+List 1[6]*(1-List 4[51]^2)->T
+1.5*1.08262668E-3*(6378.137/T)^2*List 1[5]->S
+-S*cos List 1[1]->List 1[7]
+S*(2-2.5*(sin List 1[1])^2)->List 1[8]
+Cls
+If List 4[20]=1:Then "ASCENDING":Else "DESCENDING":IfEnd
+List 4[10]->T:Prog "OSUBPT":P->List 4[30]
+List 4[10]->List 4[31]
+0->List 4[22]
+Lbl 1
+List 4[31]+20/86400->List 4[32]
+List 4[32]->T:Prog "OSUBPT":P->N
+0->S
+If List 4[20]=1 And List 4[30]<0 And N>=0:Then 1->S:IfEnd
+If List 4[20]=0 And List 4[30]>0 And N<=0:Then 1->S:IfEnd
+If S=1:Then
+List 4[31]->List 4[33]:List 4[32]->List 4[34]
+For 1->I To 30
+(List 4[33]+List 4[34])/2->T:Prog "OSUBPT"
+If List 4[20]=1:Then
+If P<0:Then (List 4[33]+List 4[34])/2->List 4[33]:Else (List 4[33]+List 4[34])/2->List 4[34]:IfEnd
+Else
+If P>0:Then (List 4[33]+List 4[34])/2->List 4[33]:Else (List 4[33]+List 4[34])/2->List 4[34]:IfEnd
+IfEnd
+Next
+(List 4[33]+List 4[34])/2->T:Prog "OSUBPT"
+(List 4[33]+List 4[34])/2->T:Prog "OCAL"
+List 4[22]+1->List 4[22]
+Locate 1,List 4[22]+1,H
+Locate 3,List 4[22]+1,":"
+Locate 4,List 4[22]+1,N
+Q*180/Pi->U
+If U>=0:Then Locate 8,List 4[22]+1,U:Locate 15,List 4[22]+1,"E":Else Locate 8,List 4[22]+1,-U:Locate 15,List 4[22]+1,"W":IfEnd
+IfEnd
+List 4[32]->List 4[31]
+N->List 4[30]
+If List 4[22]<List 4[21]:Then Goto 1:IfEnd
+"73"

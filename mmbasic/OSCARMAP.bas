@@ -132,7 +132,9 @@ SUB Project(latr, lonr)
     theta = -lonr
   ENDIF
   r = rho / (PI / 2)             ' 0 at pole, 1 at equator (rim)
-  PJX = CX + r * RR * SIN(theta)
+  ' East is counterclockwise looking down on the N pole, so subtract the
+  ' x term (a +SIN here mirrors the map east-west).
+  PJX = CX - r * RR * SIN(theta)
   PJY = CY - r * RR * COS(theta)
   ' single-hemisphere board: clip anything past the equator
   IF rho > PI / 2 THEN PJOK = 0 ELSE PJOK = 1

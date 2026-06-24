@@ -1,0 +1,443 @@
+REM SUNTRAN - OPL for Psion Series 5 (EPOC32)
+REM Sun/Moon angular separation during a pass. Module: SUNTRAN
+GLOBAL kP, kP2, kDg, kRd, gMU, gRE, gJ2, gAU
+GLOBAL sI, sE, sO, sG, sM, sN, sJ, sA, sRD, sPD
+GLOBAL gX, gY, gZ, eX, eY, eZ, bLat, bLon, lEl, lAz, lRng
+GLOBAL oLat, oLon
+GLOBAL cY%, cMo%, cD%, cH%, cMi%, cS
+GLOBAL pAos, pLos
+GLOBAL uX, uY, uZ, bX, bY, bZ
+
+PROC main:
+  kP = PI
+  kP2 = 2.0 * kP
+  kDg = kP / 180.0
+  kRd = 180.0 / kP
+  gMU = 398600.4418
+  gRE = 6378.137
+  gJ2 = 0.00108262668
+  gAU = 149597870.7
+  LOCAL g$, inc, ecc, ra, ap, ma, mm
+  LOCAL ey%, emo%, ed%, eh%, emi%, es
+  LOCAL ny%, nmo%, nd%, nh%, nmi%, now, t
+  LOCAL sx, sy, sz, dssun, dsmoon, bsun, bmoon, tsun, tmoon
+  PRINT "=== SUNTRAN (Series 5) ==="
+  PRINT "Grid: ";
+  INPUT g$
+  maiden:(g$)
+  PRINT "INC: ";
+  INPUT inc
+  PRINT "ECC: ";
+  INPUT ecc
+  PRINT "RAAN: ";
+  INPUT ra
+  PRINT "ARGP: ";
+  INPUT ap
+  PRINT "MA: ";
+  INPUT ma
+  PRINT "MM: ";
+  INPUT mm
+  PRINT "Epoch Y,Mo,D,H,Mi,S:"
+  INPUT ey%
+  INPUT emo%
+  INPUT ed%
+  INPUT eh%
+  INPUT emi%
+  INPUT es
+  PRINT "Now Y,Mo,D,H,Mi:"
+  INPUT ny%
+  INPUT nmo%
+  INPUT nd%
+  INPUT nh%
+  INPUT nmi%
+  setsat:(inc, ecc, ra, ap, ma, mm)
+  sJ = jd:(ey%, emo%, ed%, eh%, emi%, es)
+  now = jd:(ny%, nmo%, nd%, nh%, nmi%, 0.0)
+  findpass:(now)
+  IF pAos = 0.0
+    PRINT "No pass in 14 days."
+    GET
+    RETURN
+  ENDIF
+  bsun = 999.0
+  bmoon = 999.0
+  tsun = pAos
+  tmoon = pAos
+  t = pAos
+  WHILE t <= pLos
+    ecef:(t)
+    enu:(eX, eY, eZ)
+    sx = uX
+    sy = uY
+    sz = uZ
+    suneci:(t)
+    bodyu:(t)
+    dssun = sepd:(sx, sy, sz, uX, uY, uZ)
+    mooneci:(t)
+    bodyu:(t)
+    dsmoon = sepd:(sx, sy, sz, uX, uY, uZ)
+    IF dssun < bsun
+      bsun = dssun
+      tsun = t
+    ENDIF
+    IF dsmoon < bmoon
+      bmoon = dsmoon
+      tmoon = t
+    ENDIF
+    t = t + 5.0 / 86400.0
+  ENDWH
+  cal:(tsun)
+  PRINT "Min Sun-sat ";FIX$(bsun,1,5);" at ";z2$:(cH%);":";z2$:(cMi%)
+  cal:(tmoon)
+  PRINT "Min Moon-sat ";FIX$(bmoon,1,5);" at ";z2$:(cH%);":";z2$:(cMi%)
+  IF bsun < 5.0
+    PRINT "! Near SOLAR transit"
+  ENDIF
+  IF bmoon < 5.0
+    PRINT "! Near the Moon"
+  ENDIF
+  PRINT "Press a key"
+  GET
+ENDP
+
+PROC suneci:(j)
+  LOCAL n, l, g, lam, eps, r
+  n = j - 2451545.0
+  l = 280.460 + 0.9856474 * n
+  l = l - 360.0 * INT(l / 360.0)
+  g = 357.528 + 0.9856003 * n
+  g = g - 360.0 * INT(g / 360.0)
+  g = g * kDg
+  lam = (l + 1.915 * SIN(g) + 0.020 * SIN(2.0*g)) * kDg
+  eps = (23.439 - 0.0000004 * n) * kDg
+  r = (1.00014 - 0.01671 * COS(g) - 0.00014 * COS(2.0*g)) * gAU
+  bX = r * COS(lam)
+  bY = r * COS(eps) * SIN(lam)
+  bZ = r * SIN(eps) * SIN(lam)
+ENDP
+
+PROC mooneci:(j)
+  LOCAL t, lp, m, mp, d, f, lon, lat, dist, eps
+  t = (j - 2451545.0) / 36525.0
+  lp = 218.316 + 481267.881 * t
+  lp = lp - 360.0 * INT(lp / 360.0)
+  m = 357.529 + 35999.050 * t
+  m = m - 360.0 * INT(m / 360.0)
+  mp = 134.963 + 477198.867 * t
+  mp = mp - 360.0 * INT(mp / 360.0)
+  d = 297.850 + 445267.115 * t
+  d = d - 360.0 * INT(d / 360.0)
+  f = 93.272 + 483202.018 * t
+  f = f - 360.0 * INT(f / 360.0)
+  lp = lp * kDg
+  m = m * kDg
+  mp = mp * kDg
+  d = d * kDg
+  f = f * kDg
+  lon = lp + (6.289*SIN(mp) + 1.274*SIN(2.0*d-mp) + 0.658*SIN(2.0*d) + 0.214*SIN(2.0*mp) - 0.186*SIN(m) - 0.114*SIN(2.0*f)) * kDg
+  lat = (5.128*SIN(f) + 0.281*SIN(mp+f) + 0.278*SIN(mp-f) + 0.173*SIN(2.0*d-f)) * kDg
+  dist = 385000.0 - 20905.0*COS(mp) - 3699.0*COS(2.0*d-mp) - 2956.0*COS(2.0*d)
+  eps = 23.439 * kDg
+  bX = dist * COS(lat) * COS(lon)
+  bY = dist * (COS(eps) * COS(lat) * SIN(lon) - SIN(eps) * SIN(lat))
+  bZ = dist * (SIN(eps) * COS(lat) * SIN(lon) + COS(eps) * SIN(lat))
+ENDP
+
+PROC bodyu:(j)
+  LOCAL g, cg, sg, xe, ye, ze
+  g = gmst:(j)
+  cg = COS(g)
+  sg = SIN(g)
+  xe = cg * bX + sg * bY
+  ye = -sg * bX + cg * bY
+  ze = bZ
+  enu:(xe, ye, ze)
+ENDP
+
+PROC enu:(xe, ye, ze)
+  LOCAL cl, sl, col, sol, ox, oy, oz, rx, ry, rz, s, e, up, rng
+  cl = COS(oLat)
+  sl = SIN(oLat)
+  col = COS(oLon)
+  sol = SIN(oLon)
+  ox = gRE * cl * col
+  oy = gRE * cl * sol
+  oz = gRE * sl
+  rx = xe - ox
+  ry = ye - oy
+  rz = ze - oz
+  s = sl * col * rx + sl * sol * ry - cl * rz
+  e = -sol * rx + col * ry
+  up = cl * col * rx + cl * sol * ry + sl * rz
+  rng = SQR(rx * rx + ry * ry + rz * rz)
+  uX = e / rng
+  uY = -s / rng
+  uZ = up / rng
+ENDP
+
+PROC sepd:(ax, ay, az, bx, by, bz)
+  LOCAL d
+  d = ax * bx + ay * by + az * bz
+  IF d > 1.0
+    d = 1.0
+  ENDIF
+  IF d < -1.0
+    d = -1.0
+  ENDIF
+  RETURN (kP/2.0 - ATAN(d / SQR(1.0 - d*d + 0.000000000000001))) * kRd
+ENDP
+
+PROC findpass:(now)
+  LOCAL stp, j, ed
+  stp = 30.0 / 86400.0
+  pAos = 0.0
+  look:(now, oLat, oLon)
+  IF lEl >= 0.0
+    pAos = now
+  ELSE
+    findaos:(now, stp)
+  ENDIF
+  IF pAos = 0.0
+    RETURN
+  ENDIF
+  j = pAos + stp
+  WHILE 1
+    look:(j, oLat, oLon)
+    j = j + stp
+    IF lEl < 0.0 OR j > pAos + 0.02
+      BREAK
+    ENDIF
+  ENDWH
+  pLos = j
+ENDP
+
+PROC findaos:(now, stp)
+  LOCAL j, ed, a0, a1, m, k%
+  j = now
+  ed = now + 14.0
+  WHILE j < ed
+    look:(j, oLat, oLon)
+    IF lEl >= 0.0
+      a0 = j - stp
+      a1 = j
+      k% = 0
+      WHILE k% < 25
+        m = (a0 + a1) / 2.0
+        look:(m, oLat, oLon)
+        IF lEl >= 0.0
+          a1 = m
+        ELSE
+          a0 = m
+        ENDIF
+        k% = k% + 1
+      ENDWH
+      pAos = a1
+      RETURN
+    ENDIF
+    j = j + stp
+  ENDWH
+ENDP
+
+PROC setsat:(inc, ecc, ra, ap, ma, mm)
+  LOCAL p, f, ci, si
+  sI = inc * kDg
+  sE = ecc
+  sO = ra * kDg
+  sG = ap * kDg
+  sM = ma * kDg
+  sN = mm * kP2 / 86400.0
+  sA = (gMU / (sN * sN)) ** (1.0/3.0)
+  p = sA * (1.0 - sE * sE)
+  f = 1.5 * gJ2 * (gRE / p) ** 2 * sN
+  ci = COS(sI)
+  si = SIN(sI)
+  sRD = -f * ci
+  sPD = f * (2.0 - 2.5 * si * si)
+ENDP
+
+PROC jd:(y%, mo%, d%, h%, mi%, s)
+  LOCAL yy%, mm%, a%, b%, j
+  yy% = y%
+  mm% = mo%
+  IF mm% <= 2
+    yy% = yy% - 1
+    mm% = mm% + 12
+  ENDIF
+  a% = yy% / 100
+  b% = 2 - a% + (a% / 4)
+  j = INT(365.25 * (yy% + 4716)) + INT(30.6001 * (mm% + 1)) + d% + b% - 1524.5
+  j = j + (h% + mi% / 60.0 + s / 3600.0) / 24.0
+  RETURN j
+ENDP
+
+PROC gmst:(j)
+  LOCAL t, g
+  t = (j - 2451545.0) / 36525.0
+  g = 280.46061837 + 360.98564736629 * (j - 2451545.0) + 0.000387933 * t * t
+  g = g - 360.0 * INT(g / 360.0)
+  IF g < 0.0
+    g = g + 360.0
+  ENDIF
+  RETURN g * kDg
+ENDP
+
+PROC kepler:(m, e)
+  LOCAL x, dx, k%
+  x = m
+  k% = 0
+  WHILE k% < 50
+    dx = (x - e * SIN(x) - m) / (1.0 - e * COS(x))
+    x = x - dx
+    IF ABS(dx) < 0.000000000001
+      k% = 50
+    ENDIF
+    k% = k% + 1
+  ENDWH
+  RETURN x
+ENDP
+
+PROC atan2:(y, x)
+  IF x > 0.0
+    RETURN ATAN(y / x)
+  ENDIF
+  IF x < 0.0 AND y >= 0.0
+    RETURN ATAN(y / x) + kP
+  ENDIF
+  IF x < 0.0 AND y < 0.0
+    RETURN ATAN(y / x) - kP
+  ENDIF
+  IF x = 0.0 AND y > 0.0
+    RETURN kP / 2.0
+  ENDIF
+  IF x = 0.0 AND y < 0.0
+    RETURN -kP / 2.0
+  ENDIF
+  RETURN 0.0
+ENDP
+
+PROC eci:(j)
+  LOCAL dt, m, ra, ap, ee, xo, yo, u, r
+  LOCAL co, so, cu, su, ci, si
+  dt = (j - sJ) * 86400.0
+  m = sM + sN * dt
+  ra = sO + sRD * dt
+  ap = sG + sPD * dt
+  m = m - kP2 * INT(m / kP2)
+  ee = kepler:(m, sE)
+  xo = sA * (COS(ee) - sE)
+  yo = sA * SQR(1.0 - sE * sE) * SIN(ee)
+  u = atan2:(yo, xo) + ap
+  r = SQR(xo * xo + yo * yo)
+  co = COS(ra)
+  so = SIN(ra)
+  cu = COS(u)
+  su = SIN(u)
+  ci = COS(sI)
+  si = SIN(sI)
+  gX = r * (co * cu - so * su * ci)
+  gY = r * (so * cu + co * su * ci)
+  gZ = r * (su * si)
+ENDP
+
+PROC ecef:(j)
+  LOCAL g, cg, sg
+  eci:(j)
+  g = gmst:(j)
+  cg = COS(g)
+  sg = SIN(g)
+  eX = cg * gX + sg * gY
+  eY = -sg * gX + cg * gY
+  eZ = gZ
+ENDP
+
+PROC subpt:(j)
+  ecef:(j)
+  bLon = atan2:(eY, eX)
+  bLat = atan2:(eZ, SQR(eX * eX + eY * eY))
+ENDP
+
+PROC look:(j, la, lo)
+  LOCAL cl, sl, col, sol, ox, oy, oz
+  LOCAL rx, ry, rz, s, e, zz, rng
+  ecef:(j)
+  cl = COS(la)
+  sl = SIN(la)
+  col = COS(lo)
+  sol = SIN(lo)
+  ox = gRE * cl * col
+  oy = gRE * cl * sol
+  oz = gRE * sl
+  rx = eX - ox
+  ry = eY - oy
+  rz = eZ - oz
+  s = sl * col * rx + sl * sol * ry - cl * rz
+  e = -sol * rx + col * ry
+  zz = cl * col * rx + cl * sol * ry + sl * rz
+  rng = SQR(rx * rx + ry * ry + rz * rz)
+  lRng = rng
+  lEl = ASIN(zz / rng)
+  lAz = atan2:(e, -s)
+  IF lAz < 0.0
+    lAz = lAz + kP2
+  ENDIF
+ENDP
+
+PROC maiden:(g$)
+  LOCAL u$, lo, la
+  u$ = UPPER$(g$)
+  lo = (ASC(MID$(u$,1,1)) - 65) * 20 - 180
+  la = (ASC(MID$(u$,2,1)) - 65) * 10 - 90
+  lo = lo + (ASC(MID$(u$,3,1)) - 48) * 2
+  la = la + (ASC(MID$(u$,4,1)) - 48)
+  IF LEN(u$) >= 6
+    lo = lo + (ASC(MID$(u$,5,1)) - 65) / 12.0 + 1.0/24.0
+    la = la + (ASC(MID$(u$,6,1)) - 65) / 24.0 + 1.0/48.0
+  ELSE
+    lo = lo + 1.0
+    la = la + 0.5
+  ENDIF
+  oLat = la * kDg
+  oLon = lo * kDg
+ENDP
+
+PROC cal:(j)
+  LOCAL z%, f, al%, a%, b%, c%, dd%, e%, day, secs
+  j = j + 0.5
+  z% = INT(j)
+  f = j - z%
+  IF z% < 2299161
+    a% = z%
+  ELSE
+    al% = INT((z% - 1867216.25) / 36524.25)
+    a% = z% + 1 + al% - INT(al% / 4)
+  ENDIF
+  b% = a% + 1524
+  c% = INT((b% - 122.1) / 365.25)
+  dd% = INT(365.25 * c%)
+  e% = INT((b% - dd%) / 30.6001)
+  day = b% - dd% - INT(30.6001 * e%) + f
+  IF e% < 14
+    cMo% = e% - 1
+  ELSE
+    cMo% = e% - 13
+  ENDIF
+  IF cMo% > 2
+    cY% = c% - 4716
+  ELSE
+    cY% = c% - 4715
+  ENDIF
+  cD% = INT(day)
+  secs = (day - cD%) * 86400.0
+  cH% = INT(secs / 3600.0)
+  secs = secs - cH% * 3600
+  cMi% = INT(secs / 60.0)
+  cS = secs - cMi% * 60
+ENDP
+
+PROC z2$:(n%)
+  IF n% < 10
+    RETURN "0" + GEN$(n%, 1)
+  ENDIF
+  RETURN GEN$(n%, 4)
+ENDP
+

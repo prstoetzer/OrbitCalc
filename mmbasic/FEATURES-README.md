@@ -57,9 +57,57 @@ Co-visibility windows for two ground stations.
   elevation at each end (pkA / pkB), and the duration in minutes — for the times
   when **both** stations have the satellite above the minimum elevation at once.
 
+## Companion tools (new)
+
+These seven console tools share the same secular-J2 core and were verified
+against the AO-7 golden reference:
+
+- **ORBDATA.bas** — orbital data from GP elements (apogee/perigee, period,
+  velocities, J2 node/perigee drift, footprint, ground-track shift). No
+  propagation.
+- **GRIDUTIL.bas** — Maidenhead grid <-> lat/lon, plus bearing & distance.
+- **ELCHECK.bas** — element-set sanity checker; flags transcription errors.
+- **POINTING.bas** — Az/El/range step table for the next pass (rotator/beam
+  aiming) with an AOS/LOS/MaxEl summary.
+- **FREQPLAN.bas** — per-step downlink/uplink Doppler dial frequencies for a
+  pass (inverting transponder handled).
+- **SUNTRAN.bas** — minimum Sun-sat and Moon-sat angular separation during a
+  pass; flags solar-transit noise and lunar proximity.
+- **MULTISAT.bas** — next AOS + max elevation of each satellite in a small
+  built-in catalog, sorted soonest-first.
+
+Each prompts for the full element set, epoch, and current time, so it works
+for any satellite at any date.
+
 ## Accuracy & status
 Secular-J2 mean elements (not SGP4); refresh elements every few days. The orbit
 math, Doppler, Sun, and eclipse computations were verified against the project's
 golden reference (AO-7 from FM18LV). **Not yet run on a physical PicoCalc** — the
 screenshots are renders from the programs' real draw logic, so treat the first
 on-device run as a shakedown.
+
+## Companion tools (12)
+
+All share the POINTING.bas secular-J2 core (LoadSat / Look / FindPass / Cal /
+Maiden / FNjd ...) and are verified against the AO-7 reference.
+
+| File | Tool |
+|------|------|
+| `PASSCAL.bas`  | Multi-day pass calendar, min max-elevation filter |
+| `SATFREQ.bas`  | Frequency/mode/tone reference card (DATA table; 2026-06 snapshot) |
+| `UPDOWN.bas`   | Live Doppler "dial now" RX/TX readout |
+| `NODE2ME.bas`  | Equator-crossing (node) time/longitude table |
+| `SKEDQSO.bas`  | Mutual-pass scheduler for two grids |
+| `ROTOR.bas`    | Pass Az/El table, optional flip-mode |
+| `PHASE.bas`    | Sunlight/eclipse state, next change, sunlight-only flag |
+| `WINDOW.bas`   | Horizon-mask-aware effective AOS/LOS |
+| `DECAY.bas`    | Element freshness warning + low-perigee decay flag |
+| `SKYTRACK.bas` | **Graphical** polar sky chart of the pass (PicoCalc LCD) |
+| `DXGRID.bas`   | Maidenhead fields inside the footprint |
+
+Notes: all use OPTION EXPLICIT / OPTION DEFAULT FLOAT with the same DIM-at-top
+discipline as the rest of the suite. SKYTRACK is graphical (MM.HRES/CIRCLE/LINE/TEXT);
+the rest write a text table to the console. SATFREQ data is a hand-maintained
+snapshot - verify against the current AMSAT list. Verified by faithful
+transcription against the reference (no MMBasic interpreter in the build
+environment); structural balance (SUB/FUNCTION/IF/FOR/DO) audited.

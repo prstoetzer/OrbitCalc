@@ -1,0 +1,99 @@
+REM GRIDUTIL for BBC BASIC - grid <-> lat/lon, bearing & distance
+kP = 4 * ATN(1)
+kD = kP / 180
+kR = 180 / kP
+GRE = 6371
+:
+PRINT "=== GRIDUTIL (BBC BASIC) ==="
+PRINT "1 grid->lat/lon"
+PRINT "2 lat/lon->grid"
+PRINT "3 bearing & distance"
+INPUT "Choose 1/2/3: " M$
+IF M$ = "1" THEN PROCg2ll : END
+IF M$ = "2" THEN PROCll2g : END
+PROCbd
+END
+:
+DEF PROCg2ll
+LOCAL G$
+INPUT "Grid: " G$
+PROCgridll(G$)
+PRINT G$; " = "; GLAT; " N, "; GLON; " E"
+ENDPROC
+:
+DEF PROCll2g
+LOCAL LA, LO
+INPUT "Latitude +N: " LA
+INPUT "Longitude +E: " LO
+PRINT "Grid = "; FNlltogrid(LA, LO)
+ENDPROC
+:
+DEF PROCbd
+LOCAL G$, LA1, LO1, LA2, LO2
+INPUT "From grid: " G$
+PROCgridll(G$)
+LA1 = GLAT : LO1 = GLON
+INPUT "To grid: " G$
+PROCgridll(G$)
+LA2 = GLAT : LO2 = GLON
+PROCbear(LA1, LO1, LA2, LO2)
+PRINT "Bearing : "; INT(BRG + 0.5); " deg"
+PRINT "Distance: "; INT(DST + 0.5); " km"
+ENDPROC
+:
+DEF PROCgridll(G$)
+LOCAL U$
+U$ = FNupper(G$)
+GLON = (ASC(MID$(U$,1,1)) - 65) * 20 - 180
+GLAT = (ASC(MID$(U$,2,1)) - 65) * 10 - 90
+GLON = GLON + (ASC(MID$(U$,3,1)) - 48) * 2
+GLAT = GLAT + (ASC(MID$(U$,4,1)) - 48)
+IF LEN(U$) >= 6 THEN GLON = GLON + (ASC(MID$(U$,5,1)) - 65) / 12 + 1 / 24 : GLAT = GLAT + (ASC(MID$(U$,6,1)) - 65) / 24 + 1 / 48 ELSE GLON = GLON + 1 : GLAT = GLAT + 0.5
+ENDPROC
+:
+DEF FNlltogrid(LA, LO)
+LOCAL X, Y, FA, FB, SA, SB, EA, EB
+X = LO + 180 : Y = LA + 90
+FA = INT(X / 20) : FB = INT(Y / 10)
+SA = INT((X - FA * 20) / 2) : SB = INT(Y - FB * 10)
+EA = INT(((X / 2) - INT(X / 2)) * 24) : EB = INT((Y - INT(Y)) * 24)
+= CHR$(65 + FA) + CHR$(65 + FB) + STR$(SA) + STR$(SB) + CHR$(97 + EA) + CHR$(97 + EB)
+:
+DEF PROCbear(LA1, LO1, LA2, LO2)
+LOCAL A, B, C, D, DL, Y, X, CD
+A = LA1 * kD : B = LO1 * kD : C = LA2 * kD : D = LO2 * kD
+DL = D - B
+Y = SIN(DL) * COS(C)
+X = COS(A) * SIN(C) - SIN(A) * COS(C) * COS(DL)
+BRG = FNatan2(Y, X) * kR
+IF BRG < 0 THEN BRG = BRG + 360
+CD = SIN(A) * SIN(C) + COS(A) * COS(C) * COS(DL)
+IF CD > 1 THEN CD = 1
+IF CD < -1 THEN CD = -1
+DST = FNacos(CD) * GRE
+ENDPROC
+:
+DEF FNatan2(Y, X)
+IF X > 0 THEN = ATN(Y / X)
+IF X < 0 AND Y >= 0 THEN = ATN(Y / X) + kP
+IF X < 0 AND Y < 0 THEN = ATN(Y / X) - kP
+IF X = 0 AND Y > 0 THEN = kP / 2
+IF X = 0 AND Y < 0 THEN = -kP / 2
+= 0
+:
+DEF FNacos(X)
+LOCAL V
+V = X
+IF V > 1 THEN V = 1
+IF V < -1 THEN V = -1
+= kP / 2 - ATN(V / SQR(1 - V * V + 1E-18))
+:
+DEF FNupper(S$)
+LOCAL R$, K, C
+R$ = ""
+FOR K = 1 TO LEN(S$)
+C = ASC(MID$(S$, K, 1))
+IF C >= 97 AND C <= 122 THEN C = C - 32
+R$ = R$ + CHR$(C)
+NEXT K
+= R$

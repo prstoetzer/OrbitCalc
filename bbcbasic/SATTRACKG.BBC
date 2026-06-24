@@ -1,0 +1,416 @@
+REM SATTRACK for BBC BASIC - graphical satellite tracker
+REM Equirectangular world map: coastline graticule, sub-satellite
+REM point, footprint circle, observer QTH, live Az/El/range panel.
+REM Single-shot draw; press a key to step the clock forward.
+REM Runs on BBCSDL / Matrix Brandy / Acorn (needs ~MODE 1 graphics).
+kP = 4 * ATN(1)
+kP2 = 2 * kP
+kD = kP / 180
+kR = 180 / kP
+MU = 398600.4418
+RE = 6378.137
+J2 = 1.08262668E-3
+:
+REM map rectangle in graphics units (BBC logical 1280x1024)
+MX = 40
+MY = 120
+MW = 1200
+MH = 600
+:
+PRINT "=== SATTRACK (BBC BASIC) ==="
+INPUT "Grid: " G$
+PROCmaiden(G$)
+OBLAT = OLAT : OBLON = OLON
+INPUT "INC: " INC
+INPUT "ECC: " ECC
+INPUT "RAAN: " RAAN
+INPUT "ARGP: " ARGP
+INPUT "MA: " MAN
+INPUT "MM: " MM
+PRINT "Epoch UTC:"
+INPUT "  Yr: " EY
+INPUT "  Mo: " EMO
+INPUT "  Dy: " ED
+INPUT "  Hr: " EH
+INPUT "  Mi: " EMI
+INPUT "  Sc: " ES
+PRINT "Now UTC:"
+INPUT "  Yr: " NY
+INPUT "  Mo: " NMO
+INPUT "  Dy: " ND
+INPUT "  Hr: " NH
+INPUT "  Mi: " NMI
+INPUT "Step sec (key advances): " STP
+IF STP <= 0 THEN STP = 60
+PROCsetsat(INC, ECC, RAAN, ARGP, MAN, MM, FNjd(EY, EMO, ED, EH, EMI, ES))
+TJD = FNjd(NY, NMO, ND, NH, NMI, 0)
+REPEAT
+PROCframe
+K = GET
+TJD = TJD + STP / 86400
+UNTIL FALSE
+END
+:
+DEF PROCframe
+MODE 1
+PROCgrid
+PROCcoast
+PROCobs
+PROCsat
+PROCpanel
+ENDPROC
+:
+DEF PROCgrid
+LOCAL la, lo, x, y
+GCOL 0, 1
+MOVE MX, MY
+DRAW MX + MW, MY
+DRAW MX + MW, MY + MH
+DRAW MX, MY + MH
+DRAW MX, MY
+REM meridians every 30 deg
+FOR lo = -180 TO 180 STEP 30
+x = MX + (lo + 180) / 360 * MW
+MOVE x, MY
+DRAW x, MY + MH
+NEXT lo
+REM parallels every 30 deg
+FOR la = -90 TO 90 STEP 30
+y = MY + (la + 90) / 180 * MH
+MOVE MX, y
+DRAW MX + MW, y
+NEXT la
+REM equator brighter
+GCOL 0, 2
+y = MY + MH / 2
+MOVE MX, y : DRAW MX + MW, y
+ENDPROC
+:
+DEF PROCcoast
+LOCAL n, k, lo, la, x, y, first, lx
+GCOL 0, 2
+RESTORE
+REPEAT
+READ n
+IF n > 0 THEN
+first = 1
+lx = -9999
+FOR k = 1 TO n
+READ lo, la
+x = MX + (lo + 180) / 360 * MW
+y = MY + (la + 90) / 180 * MH
+IF first = 1 THEN MOVE x, y : first = 0 ELSE IF ABS(x - lx) < MW / 2 THEN DRAW x, y ELSE MOVE x, y
+lx = x
+NEXT k
+ENDIF
+UNTIL n = 0
+ENDPROC
+:
+DEF PROCobs
+LOCAL x, y, ola, olo
+ola = OBLAT * kR
+olo = OBLON * kR
+x = MX + (olo + 180) / 360 * MW
+y = MY + (ola + 90) / 180 * MH
+GCOL 0, 3
+MOVE x - 12, y : DRAW x + 12, y
+MOVE x, y - 12 : DRAW x, y + 12
+ENDPROC
+:
+DEF PROCsat
+LOCAL r, x, y, rho, k, ang, fx, fy, fla, flo, sx, sy
+PROCsubrad(TJD)
+sx = MX + (SLOND + 180) / 360 * MW
+sy = MY + (SLATD + 90) / 180 * MH
+REM footprint circle: sample its boundary in lat/lon
+GCOL 0, 2
+LASTX = -9999
+FOR k = 0 TO 72
+ang = k * 5 * kD
+PROCfppt(SLATD, SLOND, RHOD, ang)
+fx = MX + (FLO + 180) / 360 * MW
+fy = MY + (FLA + 90) / 180 * MH
+IF k = 0 THEN MOVE fx, fy ELSE PROCdrawwrap(fx, fy)
+LASTX = fx
+NEXT k
+REM sub-satellite point marker
+GCOL 0, 3
+MOVE sx - 10, sy : DRAW sx + 10, sy
+MOVE sx, sy - 10 : DRAW sx, sy + 10
+MOVE sx - 7, sy - 7 : DRAW sx + 7, sy - 7
+DRAW sx + 7, sy + 7 : DRAW sx - 7, sy + 7 : DRAW sx - 7, sy - 7
+ENDPROC
+:
+DEF PROCdrawwrap(x, y)
+REM avoid drawing a line across the whole map at the date line
+IF ABS(x - LASTX) < MW / 2 THEN DRAW x, y ELSE MOVE x, y
+ENDPROC
+:
+DEF PROCfppt(la0, lo0, rho, brg)
+LOCAL l0, b0, rr, la, lo
+l0 = la0 * kD : b0 = lo0 * kD : rr = rho * kD
+la = ASN(SIN(l0) * COS(rr) + COS(l0) * SIN(rr) * COS(brg))
+lo = b0 + FNatan2(SIN(brg) * SIN(rr) * COS(l0), COS(rr) - SIN(l0) * SIN(la))
+FLA = la * kR
+FLO = lo * kR
+IF FLO > 180 THEN FLO = FLO - 360
+IF FLO < -180 THEN FLO = FLO + 360
+ENDPROC
+:
+DEF PROCpanel
+LOCAL el, az
+PROClook(TJD, OBLAT, OBLON)
+PROCcal(TJD)
+GCOL 0, 3
+MOVE 40, 1000
+VDU 5
+MOVE 40, 1000
+PRINT FN2(CH); ":"; FN2(CMI); "Z  Lat "; FNr1(SLATD); "  Lon "; FNr1(SLOND)
+MOVE 40, 80
+el = LEL * kR
+az = LAZ * kR
+IF el >= 0 THEN PRINT "Az "; INT(az + 0.5); "  El "; INT(el + 0.5); "  Rng "; INT(LRNG); " km" ELSE PRINT "Below horizon  (next AOS unknown)"
+VDU 4
+ENDPROC
+:
+DEF PROCsubrad(j)
+LOCAL r
+PROCecef(j)
+SLATD = FNatan2(EZ, SQR(EX * EX + EY * EY)) * kR
+SLOND = FNatan2(EY, EX) * kR
+PROCeci(j)
+r = SQR(GX * GX + GY * GY + GZ * GZ)
+RHOD = FNacos(RE / r) * kR
+ENDPROC
+:
+DEF FNacos(x)
+LOCAL v
+v = x
+IF v > 1 THEN v = 1
+IF v < -1 THEN v = -1
+= kP / 2 - ATN(v / SQR(1 - v * v + 1E-18))
+:
+DEF FNr1(x)
+= INT(x * 10 + 0.5) / 10
+:
+DEF PROCsetsat(inc, ecc, raan, argp, ma, mmd, ep)
+SI0 = inc * kD
+SE = ecc
+SR0 = raan * kD
+SP0 = argp * kD
+SM0 = ma * kD
+SN0 = mmd * kP2 / 86400
+SEP = ep
+SA = (MU / (SN0 * SN0)) ^ (1/3)
+LOCAL p, f, ci, si
+p = SA * (1 - SE * SE)
+f = 1.5 * J2 * (RE / p) ^ 2 * SN0
+ci = COS(SI0)
+si = SIN(SI0)
+SRD = -f * ci
+SPD = f * (2 - 2.5 * si * si)
+ENDPROC
+:
+REM ===== Julian date from calendar =======
+DEF FNjd(y, mo, d, h, mi, s)
+LOCAL a, b
+IF mo <= 2 THEN y = y - 1 : mo = mo + 12
+a = INT(y / 100)
+b = 2 - a + INT(a / 4)
+= INT(365.25 * (y + 4716)) + INT(30.6001 * (mo + 1)) + d + b - 1524.5 + (h + mi / 60 + s / 3600) / 24
+:
+REM ===== GMST (radians) ==================
+DEF FNgmst(jd)
+LOCAL t, g
+t = (jd - 2451545) / 36525
+g = 280.46061837 + 360.98564736629 * (jd - 2451545) + 0.000387933 * t * t - t * t * t / 38710000
+g = g - 360 * INT(g / 360)
+IF g < 0 THEN g = g + 360
+= g * kD
+:
+REM ===== Kepler solver ===================
+DEF FNkepler(m, e)
+LOCAL x, dx, k
+x = m
+FOR k = 1 TO 50
+  dx = (x - e * SIN(x) - m) / (1 - e * COS(x))
+  x = x - dx
+  IF ABS(dx) < 1E-12 THEN k = 50
+NEXT
+= x
+:
+REM ===== ECI position at jd ==============
+REM results in GX,GY,GZ
+DEF PROCeci(jd)
+LOCAL dt, m, raan, argp, ee, xo, yo, u, r
+LOCAL co, so, cu, su, ci, si
+dt = (jd - SEP) * 86400
+m = SM0 + SN0 * dt
+raan = SR0 + SRD * dt
+argp = SP0 + SPD * dt
+m = m - kP2 * INT(m / kP2)
+ee = FNkepler(m, SE)
+xo = SA * (COS(ee) - SE)
+yo = SA * SQR(1 - SE * SE) * SIN(ee)
+u = FNatan2(yo, xo) + argp
+r = SQR(xo * xo + yo * yo)
+co = COS(raan) : so = SIN(raan)
+cu = COS(u) : su = SIN(u)
+ci = COS(SI0) : si = SIN(SI0)
+GX = r * (co * cu - so * su * ci)
+GY = r * (so * cu + co * su * ci)
+GZ = r * (su * si)
+ENDPROC
+:
+REM ===== ECEF position at jd =============
+REM results in EX,EY,EZ
+DEF PROCecef(jd)
+LOCAL g, cg, sg
+PROCeci(jd)
+g = FNgmst(jd)
+cg = COS(g) : sg = SIN(g)
+EX = cg * GX + sg * GY
+EY = -sg * GX + cg * GY
+EZ = GZ
+ENDPROC
+:
+REM ===== sub-point ======================
+REM results in SLAT,SLON (radians)
+DEF PROCsubpt(jd)
+PROCecef(jd)
+SLON = FNatan2(EY, EX)
+SLAT = FNatan2(EZ, SQR(EX * EX + EY * EY))
+ENDPROC
+:
+REM ===== look angles ====================
+REM results in LEL,LAZ (radians)
+DEF PROClook(jd, la, lo)
+LOCAL clat, slat, clon, slon, ox, oy, oz
+LOCAL rx, ry, rz, s, e, zz, rng
+PROCecef(jd)
+clat = COS(la) : slat = SIN(la)
+clon = COS(lo) : slon = SIN(lo)
+ox = RE * clat * clon
+oy = RE * clat * slon
+oz = RE * slat
+rx = EX - ox : ry = EY - oy : rz = EZ - oz
+s = slat * clon * rx + slat * slon * ry - clat * rz
+e = -slon * rx + clon * ry
+zz = clat * clon * rx + clat * slon * ry + slat * rz
+rng = SQR(rx * rx + ry * ry + rz * rz)
+LRNG = rng
+LEL = ASN(zz / rng)
+LAZ = FNatan2(e, -s)
+IF LAZ < 0 THEN LAZ = LAZ + kP2
+ENDPROC
+:
+REM ===== two-arg atan2 ==================
+DEF FNatan2(y, x)
+IF x > 0 THEN = ATN(y / x)
+IF x < 0 AND y >= 0 THEN = ATN(y / x) + kP
+IF x < 0 AND y < 0 THEN = ATN(y / x) - kP
+IF x = 0 AND y > 0 THEN = kP / 2
+IF x = 0 AND y < 0 THEN = -kP / 2
+= 0
+:
+REM ===== Maidenhead -> OLAT,OLON ========
+DEF PROCmaiden(g$)
+LOCAL u$, lo, la
+u$ = FNupper(g$)
+lo = (ASC(MID$(u$,1,1)) - 65) * 20 - 180
+la = (ASC(MID$(u$,2,1)) - 65) * 10 - 90
+lo = lo + (ASC(MID$(u$,3,1)) - 48) * 2
+la = la + (ASC(MID$(u$,4,1)) - 48)
+IF LEN(u$) >= 6 THEN lo = lo + (ASC(MID$(u$,5,1)) - 65) / 12 + 1/24 : la = la + (ASC(MID$(u$,6,1)) - 65) / 24 + 1/48 ELSE lo = lo + 1 : la = la + 0.5
+OLAT = la * kD
+OLON = lo * kD
+ENDPROC
+:
+DEF FNupper(a$)
+LOCAL i, c, r$
+r$ = ""
+FOR i = 1 TO LEN(a$)
+  c = ASC(MID$(a$, i, 1))
+  IF c >= 97 AND c <= 122 THEN c = c - 32
+  r$ = r$ + CHR$(c)
+NEXT
+= r$
+:
+REM ===== calendar from jd ===============
+REM results in CY,CMO,CD,CH,CMI,CS
+DEF PROCcal(jd)
+LOCAL z, f, al, a, b, c, dd, e, day, secs
+jd = jd + 0.5
+z = INT(jd) : f = jd - z
+IF z < 2299161 THEN a = z ELSE al = INT((z - 1867216.25) / 36524.25) : a = z + 1 + al - INT(al / 4)
+b = a + 1524
+c = INT((b - 122.1) / 365.25)
+dd = INT(365.25 * c)
+e = INT((b - dd) / 30.6001)
+day = b - dd - INT(30.6001 * e) + f
+IF e < 14 THEN CMO = e - 1 ELSE CMO = e - 13
+IF CMO > 2 THEN CY = c - 4716 ELSE CY = c - 4715
+CD = INT(day)
+secs = (day - CD) * 86400
+CH = INT(secs / 3600) : secs = secs - CH * 3600
+CMI = INT(secs / 60)
+CS = secs - CMI * 60
+ENDPROC
+:
+REM ===== format helpers =================
+DEF FN2(n)
+IF n < 10 THEN = "0" + STR$(n)
+= STR$(n)
+:
+DEF FNlonfmt(lond)
+IF lond >= 0 THEN = FNr1(lond) + " E"
+= FNr1(-lond) + " W"
+:
+DEF FNr1(x)
+LOCAL w, frac
+w = INT(x)
+frac = INT((x - w) * 10 + 0.5)
+IF frac >= 10 THEN w = w + 1 : frac = 0
+= STR$(w) + "." + STR$(frac)
+:
+9000 REM ===== WORLD COASTLINE DATA =====
+9001 DATA 44
+9002 DATA -168,65,-160,71,-156,71,-140,70,-125,70,-115,68
+9003 DATA -100,68,-95,73,-83,73,-78,73,-95,60,-80,55
+9004 DATA -78,62,-72,60,-64,60,-56,53,-66,50,-60,46
+9005 DATA -67,45,-70,42,-74,40,-76,35,-81,31,-80,25
+9006 DATA -90,30,-94,29,-97,26,-97,22,-105,20,-106,23
+9007 DATA -110,24,-112,30,-117,32,-122,37,-124,42,-124,48
+9008 DATA -130,54,-135,58,-140,60,-150,59,-158,56,-162,55
+9009 DATA -165,60,-168,65
+9010 DATA 22
+9011 DATA -78,8,-72,11,-62,10,-50,0,-44,-3,-38,-13
+9012 DATA -39,-22,-48,-25,-48,-34,-58,-35,-62,-39,-65,-45
+9013 DATA -69,-52,-74,-50,-72,-42,-73,-37,-71,-30,-71,-20
+9014 DATA -76,-14,-81,-6,-80,0,-78,8
+9015 DATA 60
+9016 DATA -10,36,-9,44,-2,49,2,51,8,54,12,55
+9017 DATA 10,58,5,61,8,64,15,68,25,71,40,68
+9018 DATA 55,70,70,72,90,75,105,77,130,73,160,70
+9019 DATA 180,66,170,60,160,61,150,59,140,54,135,48
+9020 DATA 130,43,122,40,122,31,120,24,110,21,105,10
+9021 DATA 98,8,100,13,95,16,90,22,80,8,77,8
+9022 DATA 72,20,67,25,57,25,50,30,48,30,36,36
+9023 DATA 28,41,40,42,50,44,48,46,38,46,32,45
+9024 DATA 28,41,26,40,23,40,24,35,35,36,36,36
+9025 DATA 28,33,15,32,10,37,0,36,-6,36,-10,36
+9026 DATA 32
+9027 DATA -6,36,0,36,10,37,11,33,20,32,25,32
+9028 DATA 32,31,34,28,43,12,51,12,48,5,42,-2
+9029 DATA 40,-10,40,-16,35,-20,33,-26,27,-34,20,-35
+9030 DATA 18,-29,15,-22,13,-17,9,-1,8,4,4,7
+9031 DATA -5,5,-8,5,-13,8,-17,14,-17,21,-13,28
+9032 DATA -10,30,-6,36
+9033 DATA 16
+9034 DATA 114,-22,122,-18,130,-12,137,-12,142,-11,146,-18
+9035 DATA 150,-22,153,-28,150,-37,143,-39,135,-35,129,-32
+9036 DATA 122,-34,115,-35,114,-28,114,-22
+9037 DATA 11
+9038 DATA -45,60,-42,66,-38,66,-25,71,-20,76,-30,82
+9039 DATA -45,82,-58,76,-53,68,-48,60,-45,60
+9040 DATA 0

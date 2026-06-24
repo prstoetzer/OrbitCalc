@@ -1,0 +1,41 @@
+REM ELCHECK for BBC BASIC - GP/OMM element sanity checker
+kP = 4 * ATN(1)
+kP2 = 2 * kP
+MU = 398600.4418
+RE = 6378.137
+:
+PRINT "=== ELCHECK (BBC BASIC) ==="
+INPUT "INC: " INC
+INPUT "ECC: " ECC
+INPUT "RAAN: " RAAN
+INPUT "ARGP: " ARGP
+INPUT "MA: " MA
+INPUT "MM: " MM
+PRINT
+NW = 0
+IF INC < 0 OR INC > 180 THEN PRINT "! INC out of 0..180" : NW = NW + 1
+IF ECC < 0 OR ECC >= 1 THEN PRINT "! ECC out of 0..1 (need <1)" : NW = NW + 1
+IF RAAN < 0 OR RAAN >= 360 THEN PRINT "! RAAN out of 0..360" : NW = NW + 1
+IF ARGP < 0 OR ARGP >= 360 THEN PRINT "! ARGP out of 0..360" : NW = NW + 1
+IF MA < 0 OR MA >= 360 THEN PRINT "! MA out of 0..360" : NW = NW + 1
+IF MM <= 0 THEN PRINT "! MM must be > 0" : NW = NW + 1 : GOTO 1000
+N = MM * kP2 / 86400
+A = (MU / (N * N)) ^ (1 / 3)
+ALTP = A * (1 - ECC) - RE
+ALTA = A * (1 + ECC) - RE
+IF ALTP < 0 THEN PRINT "! Perigee below surface ("; INT(ALTP); " km)" : NW = NW + 1
+IF MM > 17.5 THEN PRINT "! MM very high - decay or typo?" : NW = NW + 1
+IF MM < 0.5 THEN PRINT "! MM very low - beyond GEO or typo?" : NW = NW + 1
+1000
+IF NW = 0 THEN PRINT "No range problems found."
+PRINT
+PRINT "Notes:"
+IF MM <= 0 THEN END
+PRINT "  a = "; INT(A); " km, period "; INT(1440 / MM * 100 + 0.5) / 100; " min"
+PRINT "  Perigee alt "; INT(ALTP); " km, apogee "; INT(ALTA); " km"
+IF MM > 0.95 AND MM < 1.05 AND ECC < 0.01 THEN PRINT "  Looks GEO/GSO"
+IF MM > 11 THEN PRINT "  Looks LEO"
+IF MM > 1.5 AND MM <= 11 THEN PRINT "  Looks MEO"
+IF ECC > 0.5 THEN PRINT "  Highly eccentric (Molniya/HEO-like)"
+IF INC > 90 THEN PRINT "  Retrograde / sun-synchronous-ish"
+END

@@ -1,0 +1,75 @@
+REM DECAY - element freshness & decay flag. Module: DECAY
+GLOBAL kP, kP2, kDg, kRd, gMU, gRE
+GLOBAL cY%, cMo%, cD%, cH%, cMi%, cS
+
+PROC main:
+  kP = PI
+  kP2 = 2.0 * kP
+  gMU = 398600.4418
+  gRE = 6378.137
+  LOCAL mm, ecc, ep, now, age, n, a, altp, alta
+  LOCAL ey%, emo%, ed%, eh%, emi%
+  LOCAL ny%, nmo%, nd%, nh%, nmi%
+  PRINT "=== DECAY (Series 5) ==="
+  PRINT "MM rev/day: ";
+  INPUT mm
+  PRINT "ECC: ";
+  INPUT ecc
+  PRINT "Epoch Y,Mo,D,H,Mi:"
+  INPUT ey%
+  INPUT emo%
+  INPUT ed%
+  INPUT eh%
+  INPUT emi%
+  PRINT "Now Y,Mo,D,H,Mi:"
+  INPUT ny%
+  INPUT nmo%
+  INPUT nd%
+  INPUT nh%
+  INPUT nmi%
+  ep = jd:(ey%, emo%, ed%, eh%, emi%, 0.0)
+  now = jd:(ny%, nmo%, nd%, nh%, nmi%, 0.0)
+  age = now - ep
+  n = mm * kP2 / 86400.0
+  a = (gMU / (n * n)) ** (1.0 / 3.0)
+  altp = a * (1.0 - ecc) - gRE
+  alta = a * (1.0 + ecc) - gRE
+  PRINT "Age ";FIX$(age,2,8);" days"
+  IF age < 0.0
+    PRINT "! Now before epoch"
+  ENDIF
+  IF age > 14.0
+    PRINT "! Very stale >14d"
+  ENDIF
+  IF age > 5.0 AND age <= 14.0
+    PRINT "! Stale >5d"
+  ENDIF
+  IF age >= 0.0 AND age <= 5.0
+    PRINT "Fresh enough"
+  ENDIF
+  PRINT "Mean alt ";FIX$(a - gRE,0,6);" km"
+  PRINT "Peri ";FIX$(altp,0,6);" Apo ";FIX$(alta,0,6)
+  IF altp < 200.0
+    PRINT "! Rapid decay-refresh daily"
+  ENDIF
+  IF altp >= 200.0 AND altp < 350.0
+    PRINT "! Low peri-refresh 1-2d"
+  ENDIF
+  PRINT "Press a key"
+  GET
+ENDP
+
+PROC jd:(y%, mo%, d%, h%, mi%, s)
+  LOCAL yy%, mm%, a%, b%, jr
+  yy% = y%
+  mm% = mo%
+  IF mm% <= 2
+    yy% = yy% - 1
+    mm% = mm% + 12
+  ENDIF
+  a% = INT(yy% / 100)
+  b% = 2 - a% + INT(a% / 4)
+  jr = INT(365.25 * (yy% + 4716)) + INT(30.6001 * (mm% + 1)) + d% + b% - 1524.5
+  jr = jr + (h% + mi% / 60.0 + s / 3600.0) / 24.0
+  RETURN jr
+ENDP

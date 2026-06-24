@@ -9,7 +9,7 @@ Rad
 If List 1[13]=1:Then Pi/2-List 4[31]->T:List 4[32]->I:IfEnd
 If List 1[13]=0:Then Pi/2+List 4[31]->T:-List 4[32]->I:IfEnd
 T/(Pi/2)->S
-List 4[1]+S*List 4[3]*sin I->List 4[33]
+List 4[1]-S*List 4[3]*sin I->List 4[33]
 List 4[2]+S*List 4[3]*cos I->List 4[34]
 1->List 4[35]
 If T>Pi/2:Then 0->List 4[35]:IfEnd

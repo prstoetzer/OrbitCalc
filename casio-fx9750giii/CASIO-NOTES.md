@@ -26,6 +26,15 @@ planning; refresh elements every few days.
 - `sunecl.py`  — Sun az/el + satellite sunlit/eclipse with a timeline
 - `mutual.py`  — co-visibility window finder for two stations (text)
 
+### Companion tools (Python)
+- `orbdata.py` — orbital data from GP elements (apogee/perigee, period,
+  velocities, J2 node/perigee drift, footprint, track shift). No propagation.
+- `gridutil.py`— Maidenhead grid ⇄ lat/lon, plus bearing & distance.
+- `pointing.py`— Az/El/range step table for the next pass (rotator/beam aiming),
+  with a one-line AOS/LOS/MaxEl summary.
+- `freqplan.py`— per-step downlink/uplink Doppler dial frequencies for a pass
+  (inverting transponder handled). Self-contained (does not import pointing).
+
 ### Entry order (Python feature programs)
 Each of `doppler.py`, `passplot.py`, `sunecl.py`, and `mutual.py` prompts for
 **everything the prediction needs** — so they work for any satellite at any
@@ -108,6 +117,14 @@ Main programs:
 - `OSUN`   — Sun az/el + satellite sunlit/eclipse (text)
 - `OMUTUAL`— co-visibility window finder for two stations (text)
 
+Companion tools (BASIC):
+- `OORBDAT`— orbital data from GP elements (no sub-programs needed)
+- `OGRID`  — grid ⇄ lat/lon + bearing/distance. NOTE: the fx-9750GIII has no
+  string-character-code function, so grids are entered/shown as numeric
+  field/square/subsquare values, not as a 6-character string.
+- `OPOINT` — Az/El step table for the next pass (needs OJD/OCAL/OATAN2/OSUBPT/OLOOK)
+- `OFREQP` — Doppler dial-frequency schedule for a pass (same sub-programs)
+
 Shared sub-programs (REQUIRED — store all your main programs' listed deps):
 - `OJD`    — Gregorian date/time -> Julian Date
 - `OCAL`   — Julian Date -> calendar
@@ -142,3 +159,25 @@ OCPASS / OCEQX prompt for: INC, ECC, RAAN, ARGP, MA, MM, then EPOCH
 for OCPASS). OSCLOC prompts for EQX longitude (sign: +E / −W), node
 (1=ascending, 2=descending), month, day, EQX hour/min, period (min), and
 advance per orbit (degrees west).
+
+## Companion tools
+
+### Casio Python (9 tools, dialect-clean, verified vs AO-7 reference)
+- `passcal.py` - multi-day pass calendar filtered by min max-elevation
+- `node2me.py` - equator-crossing (node) time/longitude table
+- `skedqso.py` - mutual-pass scheduler for two grids
+- `rotor.py`   - pass Az/El table, optional flip-mode for over-the-top rotators
+- `phase.py`   - sunlight/eclipse state, next change, sunlight-only active flag
+- `window.py`  - horizon-mask-aware effective AOS/LOS
+- `decay.py`   - element freshness warning + low-perigee decay flag
+- `satfreq.py` - frequency/mode/tone reference (parallel lists; 2026-06 snapshot)
+- `updown.py`  - live Doppler "dial now" RX/TX readout, row-stepped
+
+### Casio BASIC (3 tools - the subset that fits the platform)
+- `ODECAY` - element freshness & decay flag (no sub-programs, closed-form)
+- `ONODE`  - equator-crossing table (needs OSUBPT/OATAN2/OJD/OCAL)
+- `OPASSC` - multi-day pass calendar w/ elevation filter (needs OLOOK etc.)
+
+Casio BASIC does not get SATFREQ as a string card (no string-char-code; would
+need numeric encoding), nor the graphical SKYTRACK; use Casio Python or another
+platform for those. UPDOWN/ROTOR overlap the existing ODOPLR/OFREQP/OPOINT.

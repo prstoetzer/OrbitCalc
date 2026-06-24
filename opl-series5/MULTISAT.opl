@@ -1,0 +1,383 @@
+REM MULTISAT - OPL for Psion Series 5 (EPOC32)
+REM Next pass of each satellite, sorted soonest-first. Module: MULTISAT
+GLOBAL kP, kP2, kDg, kRd, gMU, gRE, gJ2
+GLOBAL sI, sE, sO, sG, sM, sN, sJ, sA, sRD, sPD
+GLOBAL gX, gY, gZ, eX, eY, eZ, bLat, bLon, lEl, lAz, lRng
+GLOBAL oLat, oLon
+GLOBAL cY%, cMo%, cD%, cH%, cMi%, cS
+GLOBAL rAos, rUp%, rMel
+GLOBAL nSat%
+GLOBAL snm$(8,8), si(8), se(8), so(8), sg(8), sma(8), smm(8)
+GLOBAL raa(8), rmm(8), ruu%(8), rnn$(8,8)
+
+PROC main:
+  kP = PI
+  kP2 = 2.0 * kP
+  kDg = kP / 180.0
+  kRd = 180.0 / kP
+  gMU = 398600.4418
+  gRE = 6378.137
+  gJ2 = 0.00108262668
+  LOCAL g$, ep, now, i%, j%, nr%
+  LOCAL ey%, emo%, ed%, eh%, emi%, es
+  LOCAL ny%, nmo%, nd%, nh%, nmi%
+  LOCAL ta, tn$, tm, tu%
+  PRINT "=== MULTISAT (Series 5) ==="
+  PRINT "Grid: ";
+  INPUT g$
+  maiden:(g$)
+  PRINT "Epoch Y,Mo,D,H,Mi,S:"
+  INPUT ey%
+  INPUT emo%
+  INPUT ed%
+  INPUT eh%
+  INPUT emi%
+  INPUT es
+  PRINT "Now Y,Mo,D,H,Mi:"
+  INPUT ny%
+  INPUT nmo%
+  INPUT nd%
+  INPUT nh%
+  INPUT nmi%
+  ep = jd:(ey%, emo%, ed%, eh%, emi%, es)
+  now = jd:(ny%, nmo%, nd%, nh%, nmi%, 0.0)
+  catalog:
+  nr% = 0
+  i% = 1
+  WHILE i% <= nSat%
+    setsat:(si(i%), se(i%), so(i%), sg(i%), sma(i%), smm(i%))
+    sJ = ep
+    nextaos:(now)
+    IF rAos > 0.0
+      nr% = nr% + 1
+      raa(nr%) = rAos
+      rnn$(nr%) = snm$(i%)
+      rmm(nr%) = rMel
+      ruu%(nr%) = rUp%
+    ENDIF
+    i% = i% + 1
+  ENDWH
+  i% = 1
+  WHILE i% < nr%
+    j% = 1
+    WHILE j% <= nr% - i%
+      IF raa(j%) > raa(j%+1)
+        ta = raa(j%)
+        raa(j%) = raa(j%+1)
+        raa(j%+1) = ta
+        tn$ = rnn$(j%)
+        rnn$(j%) = rnn$(j%+1)
+        rnn$(j%+1) = tn$
+        tm = rmm(j%)
+        rmm(j%) = rmm(j%+1)
+        rmm(j%+1) = tm
+        tu% = ruu%(j%)
+        ruu%(j%) = ruu%(j%+1)
+        ruu%(j%+1) = tu%
+      ENDIF
+      j% = j% + 1
+    ENDWH
+    i% = i% + 1
+  ENDWH
+  PRINT "NEXT PASSES (soonest first)"
+  PRINT "Sat AOS(UTC) MaxEl"
+  i% = 1
+  WHILE i% <= nr%
+    cal:(raa(i%))
+    PRINT rnn$(i%);" ";z2$:(cD%);"/";z2$:(cMo%);" ";z2$:(cH%);":";z2$:(cMi%);" ";FIX$(rmm(i%)*kRd,0,3);
+    IF ruu%(i%) = 1
+      PRINT " UP"
+    ELSE
+      PRINT ""
+    ENDIF
+    i% = i% + 1
+  ENDWH
+  PRINT "Press a key"
+  GET
+ENDP
+
+PROC catalog:
+  nSat% = 3
+  snm$(1) = "AO-7"
+  si(1) = 101.9899
+  se(1) = 0.0012609
+  so(1) = 184.6033
+  sg(1) = 124.3014
+  sma(1) = 247.3322
+  smm(1) = 12.53698149
+  snm$(2) = "ISS"
+  si(2) = 51.64
+  se(2) = 0.0003
+  so(2) = 90.0
+  sg(2) = 60.0
+  sma(2) = 300.0
+  smm(2) = 15.5
+  snm$(3) = "SO-50"
+  si(3) = 64.55
+  se(3) = 0.007
+  so(3) = 200.0
+  sg(3) = 150.0
+  sma(3) = 210.0
+  smm(3) = 14.75
+ENDP
+
+PROC nextaos:(now)
+  LOCAL stp, j, ed, me
+  stp = 30.0 / 86400.0
+  rAos = 0.0
+  rUp% = 0
+  look:(now, oLat, oLon)
+  IF lEl >= 0.0
+    rAos = now
+    rUp% = 1
+  ELSE
+    naos:(now, stp)
+  ENDIF
+  IF rAos = 0.0
+    RETURN
+  ENDIF
+  me = 0.0
+  j = rAos
+  WHILE j < rAos + 0.02
+    look:(j, oLat, oLon)
+    IF lEl < 0.0 AND j > rAos + stp
+      BREAK
+    ENDIF
+    IF lEl > me
+      me = lEl
+    ENDIF
+    j = j + stp
+  ENDWH
+  rMel = me
+ENDP
+
+PROC naos:(now, stp)
+  LOCAL j, ed, a0, a1, m, k%
+  j = now
+  ed = now + 2.0
+  WHILE j < ed
+    look:(j, oLat, oLon)
+    IF lEl >= 0.0
+      a0 = j - stp
+      a1 = j
+      k% = 0
+      WHILE k% < 20
+        m = (a0 + a1) / 2.0
+        look:(m, oLat, oLon)
+        IF lEl >= 0.0
+          a1 = m
+        ELSE
+          a0 = m
+        ENDIF
+        k% = k% + 1
+      ENDWH
+      rAos = a1
+      RETURN
+    ENDIF
+    j = j + stp
+  ENDWH
+ENDP
+
+PROC setsat:(inc, ecc, ra, ap, ma, mm)
+  LOCAL p, f, ci, si
+  sI = inc * kDg
+  sE = ecc
+  sO = ra * kDg
+  sG = ap * kDg
+  sM = ma * kDg
+  sN = mm * kP2 / 86400.0
+  sA = (gMU / (sN * sN)) ** (1.0/3.0)
+  p = sA * (1.0 - sE * sE)
+  f = 1.5 * gJ2 * (gRE / p) ** 2 * sN
+  ci = COS(sI)
+  si = SIN(sI)
+  sRD = -f * ci
+  sPD = f * (2.0 - 2.5 * si * si)
+ENDP
+
+PROC jd:(y%, mo%, d%, h%, mi%, s)
+  LOCAL yy%, mm%, a%, b%, j
+  yy% = y%
+  mm% = mo%
+  IF mm% <= 2
+    yy% = yy% - 1
+    mm% = mm% + 12
+  ENDIF
+  a% = yy% / 100
+  b% = 2 - a% + (a% / 4)
+  j = INT(365.25 * (yy% + 4716)) + INT(30.6001 * (mm% + 1)) + d% + b% - 1524.5
+  j = j + (h% + mi% / 60.0 + s / 3600.0) / 24.0
+  RETURN j
+ENDP
+
+PROC gmst:(j)
+  LOCAL t, g
+  t = (j - 2451545.0) / 36525.0
+  g = 280.46061837 + 360.98564736629 * (j - 2451545.0) + 0.000387933 * t * t
+  g = g - 360.0 * INT(g / 360.0)
+  IF g < 0.0
+    g = g + 360.0
+  ENDIF
+  RETURN g * kDg
+ENDP
+
+PROC kepler:(m, e)
+  LOCAL x, dx, k%
+  x = m
+  k% = 0
+  WHILE k% < 50
+    dx = (x - e * SIN(x) - m) / (1.0 - e * COS(x))
+    x = x - dx
+    IF ABS(dx) < 0.000000000001
+      k% = 50
+    ENDIF
+    k% = k% + 1
+  ENDWH
+  RETURN x
+ENDP
+
+PROC atan2:(y, x)
+  IF x > 0.0
+    RETURN ATAN(y / x)
+  ENDIF
+  IF x < 0.0 AND y >= 0.0
+    RETURN ATAN(y / x) + kP
+  ENDIF
+  IF x < 0.0 AND y < 0.0
+    RETURN ATAN(y / x) - kP
+  ENDIF
+  IF x = 0.0 AND y > 0.0
+    RETURN kP / 2.0
+  ENDIF
+  IF x = 0.0 AND y < 0.0
+    RETURN -kP / 2.0
+  ENDIF
+  RETURN 0.0
+ENDP
+
+PROC eci:(j)
+  LOCAL dt, m, ra, ap, ee, xo, yo, u, r
+  LOCAL co, so, cu, su, ci, si
+  dt = (j - sJ) * 86400.0
+  m = sM + sN * dt
+  ra = sO + sRD * dt
+  ap = sG + sPD * dt
+  m = m - kP2 * INT(m / kP2)
+  ee = kepler:(m, sE)
+  xo = sA * (COS(ee) - sE)
+  yo = sA * SQR(1.0 - sE * sE) * SIN(ee)
+  u = atan2:(yo, xo) + ap
+  r = SQR(xo * xo + yo * yo)
+  co = COS(ra)
+  so = SIN(ra)
+  cu = COS(u)
+  su = SIN(u)
+  ci = COS(sI)
+  si = SIN(sI)
+  gX = r * (co * cu - so * su * ci)
+  gY = r * (so * cu + co * su * ci)
+  gZ = r * (su * si)
+ENDP
+
+PROC ecef:(j)
+  LOCAL g, cg, sg
+  eci:(j)
+  g = gmst:(j)
+  cg = COS(g)
+  sg = SIN(g)
+  eX = cg * gX + sg * gY
+  eY = -sg * gX + cg * gY
+  eZ = gZ
+ENDP
+
+PROC subpt:(j)
+  ecef:(j)
+  bLon = atan2:(eY, eX)
+  bLat = atan2:(eZ, SQR(eX * eX + eY * eY))
+ENDP
+
+PROC look:(j, la, lo)
+  LOCAL cl, sl, col, sol, ox, oy, oz
+  LOCAL rx, ry, rz, s, e, zz, rng
+  ecef:(j)
+  cl = COS(la)
+  sl = SIN(la)
+  col = COS(lo)
+  sol = SIN(lo)
+  ox = gRE * cl * col
+  oy = gRE * cl * sol
+  oz = gRE * sl
+  rx = eX - ox
+  ry = eY - oy
+  rz = eZ - oz
+  s = sl * col * rx + sl * sol * ry - cl * rz
+  e = -sol * rx + col * ry
+  zz = cl * col * rx + cl * sol * ry + sl * rz
+  rng = SQR(rx * rx + ry * ry + rz * rz)
+  lRng = rng
+  lEl = ASIN(zz / rng)
+  lAz = atan2:(e, -s)
+  IF lAz < 0.0
+    lAz = lAz + kP2
+  ENDIF
+ENDP
+
+PROC maiden:(g$)
+  LOCAL u$, lo, la
+  u$ = UPPER$(g$)
+  lo = (ASC(MID$(u$,1,1)) - 65) * 20 - 180
+  la = (ASC(MID$(u$,2,1)) - 65) * 10 - 90
+  lo = lo + (ASC(MID$(u$,3,1)) - 48) * 2
+  la = la + (ASC(MID$(u$,4,1)) - 48)
+  IF LEN(u$) >= 6
+    lo = lo + (ASC(MID$(u$,5,1)) - 65) / 12.0 + 1.0/24.0
+    la = la + (ASC(MID$(u$,6,1)) - 65) / 24.0 + 1.0/48.0
+  ELSE
+    lo = lo + 1.0
+    la = la + 0.5
+  ENDIF
+  oLat = la * kDg
+  oLon = lo * kDg
+ENDP
+
+PROC cal:(j)
+  LOCAL z%, f, al%, a%, b%, c%, dd%, e%, day, secs
+  j = j + 0.5
+  z% = INT(j)
+  f = j - z%
+  IF z% < 2299161
+    a% = z%
+  ELSE
+    al% = INT((z% - 1867216.25) / 36524.25)
+    a% = z% + 1 + al% - INT(al% / 4)
+  ENDIF
+  b% = a% + 1524
+  c% = INT((b% - 122.1) / 365.25)
+  dd% = INT(365.25 * c%)
+  e% = INT((b% - dd%) / 30.6001)
+  day = b% - dd% - INT(30.6001 * e%) + f
+  IF e% < 14
+    cMo% = e% - 1
+  ELSE
+    cMo% = e% - 13
+  ENDIF
+  IF cMo% > 2
+    cY% = c% - 4716
+  ELSE
+    cY% = c% - 4715
+  ENDIF
+  cD% = INT(day)
+  secs = (day - cD%) * 86400.0
+  cH% = INT(secs / 3600.0)
+  secs = secs - cH% * 3600
+  cMi% = INT(secs / 60.0)
+  cS = secs - cMi% * 60
+ENDP
+
+PROC z2$:(n%)
+  IF n% < 10
+    RETURN "0" + GEN$(n%, 1)
+  ENDIF
+  RETURN GEN$(n%, 4)
+ENDP
+

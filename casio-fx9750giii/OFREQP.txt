@@ -1,0 +1,89 @@
+'Program: OFREQP   Casio BASIC  fx-9750GIII
+'Doppler tuning schedule for a pass: per-step downlink and
+'uplink dial frequencies (inverting transponder handled).
+'REQUIRES sub-programs: OSUBPT OATAN2 OJD OCAL OLOOK
+'List 1: orbit consts + 11=lat 12=lon (rad)
+'List 4: [10]=nowJD [60]=aos [62]=los [13]=stepSec
+'  [20]=Fdn [21]=Fup [22]=invert [40]=c
+'  [30]=r0 [31]=r1 [32]=rangerate
+'Only I,J,N,S,T safe.
+Rad
+299792.458->List 4[40]
+"OFREQP"
+"INC"?->List 4[50]
+"ECC"?->List 4[51]
+"RAAN"?->List 4[52]
+"ARGP"?->List 4[53]
+"MA"?->List 4[54]
+"MM REV/D"?->List 4[55]
+"EPOCH UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:"S"?->S
+Prog "OJD":J->List 1[9]
+"NOW UTC"
+"Y"?->Y:"MO"?->M:"D"?->D:"H"?->H:"MI"?->N:0->S
+Prog "OJD":J->List 4[10]
+"LAT +N/-S"?->T:T*Pi/180->List 1[11]
+"LON +E/-W"?->T:T*Pi/180->List 1[12]
+"DOWNLINK MHZ"?->List 4[20]
+"UPLINK MHZ"?->List 4[21]
+"INVERT 1/0"?->List 4[22]
+"STEP SEC"?->List 4[13]
+List 4[50]*Pi/180->List 1[1]
+List 4[52]*Pi/180->List 1[2]
+List 4[53]*Pi/180->List 1[3]
+List 4[54]*Pi/180->List 1[4]
+List 4[55]*2*Pi/86400->List 1[5]
+(398600.4418/(List 1[5])^2)^(1/3)->List 1[6]
+List 4[51]->List 1[10]
+List 1[6]*(1-List 4[51]^2)->T
+1.5*1.08262668E-3*(6378.137/T)^2*List 1[5]->S
+-S*cos List 1[1]->List 1[7]
+S*(2-2.5*(sin List 1[1])^2)->List 1[8]
+'--- find AOS ---
+0->List 4[66]
+List 4[10]->T:Prog "OLOOK"
+If P>=0:Then List 4[10]->List 4[60]:1->List 4[66]:IfEnd
+If List 4[66]=0:Then
+List 4[10]->List 4[70]
+Lbl 1
+List 4[70]->T:Prog "OLOOK"
+If P>=0:Then
+List 4[70]-30/86400->List 4[71]:List 4[70]->List 4[72]
+For 1->I To 25
+(List 4[71]+List 4[72])/2->T:Prog "OLOOK"
+If P>=0:Then (List 4[71]+List 4[72])/2->List 4[72]:Else (List 4[71]+List 4[72])/2->List 4[71]:IfEnd
+Next
+List 4[72]->List 4[60]:1->List 4[66]
+IfEnd
+List 4[70]+30/86400->List 4[70]
+If List 4[66]=0 And List 4[70]<List 4[10]+14:Then Goto 1:IfEnd
+IfEnd
+If List 4[66]=0:Then "NO PASS 14D":Stop:IfEnd
+'--- find LOS ---
+List 4[60]+30/86400->List 4[70]
+Lbl 2
+List 4[70]->T:Prog "OLOOK"
+List 4[70]+30/86400->List 4[70]
+If P>=0 And List 4[70]<List 4[60]+0.02:Then Goto 2:IfEnd
+List 4[70]->List 4[62]
+Cls
+Locate 1,1,"UTC  DN MHZ  UP MHZ"
+2->S
+List 4[60]->List 4[14]
+Lbl 3
+List 4[14]-1/86400->T:Prog "OLOOK":R->List 4[30]
+List 4[14]+1/86400->T:Prog "OLOOK":R->List 4[31]
+(List 4[31]-List 4[30])/2->List 4[32]
+List 4[14]->J:Prog "OCAL"
+Locate 1,S,H
+Locate 3,S,":"
+Locate 4,S,N
+List 4[20]-List 4[20]*1000000*List 4[32]/List 4[40]/1000000->List 4[33]
+Locate 7,S,List 4[33]
+If List 4[22]=1:Then List 4[21]+List 4[21]*1000000*List 4[32]/List 4[40]/1000000->List 4[34]:Else List 4[21]-List 4[21]*1000000*List 4[32]/List 4[40]/1000000->List 4[34]:IfEnd
+Locate 15,S,List 4[34]
+S+1->S
+If S>8:Then 2->S:"-- MORE --"?->K:Cls:Locate 1,1,"UTC  DN MHZ  UP MHZ":IfEnd
+List 4[14]+List 4[13]/86400->List 4[14]
+If List 4[14]<=List 4[62]:Then Goto 3:IfEnd
+"73"

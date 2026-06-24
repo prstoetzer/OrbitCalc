@@ -95,30 +95,64 @@ by the per-orbit advance.
 to the SD card. File: `mmbasic/SATTRACK.bas`. Full guide:
 `mmbasic/SATTRACK-README.md`.
 
-**Menu:**
-1. **Set location, date & time (UTC)** — saved to `B:/loc.dat`.
-2. **Edit / save satellites** — up to **20**, stored on `B:/sats.dat`.
-3. **Next 10 passes** of one satellite (text list).
-4. **Polar plot** of the next / current pass of one satellite (sky dial with the
-   ground track across the sky, AOS/LOS markers, direction of travel).
-5. **Next 3 passes of all satellites**, merged and sorted by time.
-6. **World map** (equirectangular) with your location and the live **footprints**
-   of all satellites, single-step or auto-advancing.
+**Menu (13 items):**
+1. **Set location / date / time (UTC)** — Maidenhead grid or lat/lon; clock from
+   the PicoCalc RTC or by hand. Saved to `B:/loc.dat`.
+2. **Edit satellites** — up to **200**, each with six elements, epoch, and optional
+   downlink/uplink frequencies. Saved to `B:/sats.dat`. The list scrolls (Up/Down
+   move, Left/Right page).
+3. **Load elements (TLE or JSON)** — import from SD, auto-detecting NORAD TLE/3LE
+   or OMM/JSON (AMSAT `daily-bulletin.json` or Celestrak `json-pretty`); null
+   records skipped, ISO-8601 epochs handled. The whole AMSAT bulletin loads at once.
+4. **Next 10 passes** of one satellite (text list).
+5. **Polar plot** of the next / current pass (sky dial with the ground track,
+   AOS/LOS markers, direction of travel).
+6. **Live track + Doppler** — Az/El compass dial, Doppler-corrected RX/TX dial
+   frequencies, range and range-rate, sunlit/eclipse flag, next AOS.
+7. **Next 3 passes of all satellites**, merged and sorted by time; the search
+   horizon shortens automatically as the catalogue grows so it stays responsive.
+8. **World map** (equirectangular) with each satellite's sub-point and footprint
+   in a distinct colour, plus a shaded day/night terminator; single-step or auto.
+9. **Pass ground-track preview** — the upcoming pass as a ground-track arc with
+   footprints at AOS, TCA, and LOS.
+0. **OSCARLOCATOR** — interactive azimuthal-equidistant plotting board for one
+   satellite: one-orbit ground-track arc from its equator crossing, range circle
+   over the QTH (amber), footprint at the sub-point (green), and a sub-point /
+   Az-El-range / EQX-longitude readout. The **polar projection is the default**
+   and auto-selects N/S by your latitude (ascending node for northern stations,
+   descending for southern); press **M** for the optional **QTH-centred** view.
+   Step the clock with SPACE/B, auto-run with F/S, re-pin with R, exit with ESC.
+
+The last three (keys **A**/**B**/**C**) are CardSat-inspired and use no external
+devices:
+
+A. **Pass watch + AOS alarm** — counts down to the soonest AOS across the whole
+   catalogue, with the satellite name, AOS time, predicted max elevation, and a
+   shrinking ring; in the final minute it flashes the screen and beeps the speaker.
+B. **Pass detail** — the next pass's elevation-versus-time curve, coloured green
+   where the satellite is sunlit and grey where eclipsed, with a Sun glyph and an
+   AOS / TCA / LOS / max-elevation readout.
+C. **Sun position** — a live sky dial of the Sun's azimuth and elevation from your
+   station, plus the subsolar latitude/longitude.
 
 **Install:** copy `SATTRACK.bas` to SD (drive **B:**); optionally copy
 `sats.dat.sample` to `B:/sats.dat` for a starter set (AO-7, AO-27, FO-29, ISS,
-SO-50). At the MMBasic prompt: `RUN "B:/SATTRACK.bas"`. Navigate with arrow
-keys + Enter or number keys 1–6; ESC backs out / quits. Your elements and
-location reload automatically next launch.
+SO-50), and a `tle.txt` / OMM JSON file for menu 3. At the MMBasic prompt:
+`RUN "B:/SATTRACK.bas"`. Navigate with arrow keys + Enter or the shortcut keys
+1-9, 0, and A-C; ESC backs out / quits. Your elements and location reload
+automatically next launch.
 
 ---
 
 ## 4. Live polar OSCARLOCATOR map
 
-A live, single-hemisphere azimuthal-equidistant map: the pole of your hemisphere
-at the centre, the **equator at the rim**, the satellite's ground-track arc
-(anchored at its equator crossing), and the live sub-satellite point stepping in
-time. Three implementations:
+A live, azimuthal-equidistant OSCARLOCATOR: by default a single-hemisphere
+**polar** projection with the pole of your hemisphere at the centre and the
+**equator at the rim**, the satellite's ground-track arc (anchored at its equator
+crossing), and the live sub-satellite point stepping in time. The same view is
+built into **SATTRACK** as menu item 0 (working from its stored catalogue), where
+it adds an optional **QTH-centred** azimuthal projection — your station at the
+centre, true bearings outward — toggled with **M**. Standalone implementations:
 
 ### 4a. OSCARMAP (PicoCalc, MMBasic)
 File: `mmbasic/OSCARMAP.bas`; guide: `mmbasic/OSCARMAP-README.md`. The richest
@@ -298,3 +332,89 @@ faithfully transcribing its exact control/variable flow and comparing to the
 reference. **Nothing here has been run on the physical PicoCalc or fx-9750GIII**;
 the screenshots are renders from each program's real draw logic, not device
 captures. Treat the first on-device run as a shakedown.
+
+---
+
+## Companion tools (cross-platform)
+
+Nineteen single-purpose utilities, each ported across the platforms and verified
+against the AO-7 golden reference (a=7827.2 km, period 114.86 min; next pass from
+FM18LV on 2026-06-22 at AOS 00:00 / LOS 00:18 / MaxEl 32deg). They group into
+data, pass-planning, pointing/radio, and visibility helpers.
+
+| Tool | Purpose |
+|------|---------|
+| **orbdata** | Closed-form orbital data from one GP/OMM element set: semi-major axis, period, apogee/perigee, vis-viva velocities, J2 node & perigee drift, footprint, ground-track shift. No propagation. |
+| **gridutil** | Maidenhead grid <-> lat/lon, plus great-circle bearing & distance. |
+| **elcheck** | Element-set sanity checker: range/consistency tests that flag transcription errors before a pass. |
+| **decay** | Element-age freshness warning + low-perigee fast-decay flag; optional two-epoch dn/dt estimate. |
+| **passcal** | Multi-day pass calendar filtered by a minimum max-elevation (show only the workable passes). |
+| **pointing** | Az/El/range step table across the next pass for rotator/beam aiming, with an AOS/LOS/MaxEl summary. |
+| **rotor** | Az/El pass sequence as a table / CSV / replay macro, with optional flip-mode for over-the-top az/el rotators. |
+| **freqplan** | Per-step downlink/uplink Doppler dial frequencies across a pass; inverting transponder handled. |
+| **updown** | Live "dial now" Doppler RX/TX readout, stepped during a pass; inverting transponder handled. |
+| **satfreq** | Uplink/downlink/mode/inversion/CTCSS reference card for the common birds. Hand-maintained snapshot — verify before a pass. |
+| **node2me** | Ascending/descending-node UTC times and equator-crossing longitudes for a paper OSCARLOCATOR board. |
+| **skedqso** | Mutual-visibility windows for two grids above a min elevation — for scheduling grid-to-grid contacts. |
+| **window** | Recomputes effective AOS/LOS against a per-azimuth horizon-obstruction mask (trees/buildings). |
+| **phase** | Is a sunlight-only bird (e.g. AO-7) likely active now; next illumination change; orbit-phase %. |
+| **sunlight** | Per-pass satellite sunlit/eclipsed timeline plus observer darkness (optical visibility). |
+| **suntransit** / **suntran** | Minimum Sun-sat and Moon-sat angular separation during a pass; flags solar-transit noise and lunar proximity. |
+| **dxgrid** | Maidenhead fields currently inside the satellite footprint — "who can I work right now." |
+| **skytrack** | Polar sky chart of the pass arc — ASCII on console platforms, graphical on PicoCalc/MMBasic. |
+| **multisat** | Next AOS + max elevation of each satellite in a small built-in catalog (AO-7/ISS/SO-50), sorted soonest-first. |
+
+### Coverage by platform
+
+Every platform carries the two console cores (`ORBCALC` / `OSCARLOC`) plus the
+companion tools listed here.
+
+| Platform | Companion-tool coverage |
+|----------|-------------------------|
+| MicroPython | all 19 (reference implementations) |
+| BBC BASIC | all 19 — **run-tested under Matrix Brandy** |
+| GW-BASIC | all 19 — **run-verified under PC-BASIC** |
+| MMBasic (PicoCalc) | all 19 (skytrack is graphical) |
+| Psion OPL Series 5 | all 19 |
+| Psion OPL Series 3c | all 19 (SIBO dialect: no ASIN, elevation via ATAN) |
+| Casio fx-9750GIII (Python) | 16 (all but the three heaviest graphical/visibility tools) |
+| Casio fx-9750GIII (BASIC) | a fitted subset (`OORBDAT`, `OGRID`, `OPOINT`, `OFREQP`, `ODECAY`, `ONODE`, `OPASSC`) |
+
+### Per-platform file names
+
+Tool file names follow the platform's convention: lower-case `name.py` on
+MicroPython and Casio Python; upper-case `NAME.bas` / `.BAS` on MMBasic and
+GW-BASIC; `NAME.BBC` on BBC BASIC; `NAME.opl` on both OPL dialects. The Casio
+native-BASIC tools use short `O`-prefixed names (e.g. `OORBDAT`, `OGRID`).
+
+### Graphical applications
+
+- **SATTRACK** — the PicoCalc's thirteen-view application (MMBasic): location/RTC,
+  satellite editor (up to 200 sats, scrolling), TLE/JSON import, pass lists, polar
+  plot, live Doppler track, all-sats schedule, world map with terminator, pass
+  ground-track preview, the OSCARLOCATOR view, plus the CardSat-inspired pass watch
+  with AOS alarm, sunlit/eclipse pass-detail plot, and Sun-position dial. See
+  `mmbasic/SATTRACK-README.md`.
+- **OSCARMAP** — a standalone PicoCalc azimuthal-equidistant OSCARLOCATOR with its
+  own coastline and element entry. See `mmbasic/OSCARMAP-README.md`.
+- **SATTRACKG** (BBC BASIC) and **SATTRACK.BAS** (GW-BASIC) — equirectangular
+  world-map trackers with a vector coastline, observer cross, sub-satellite cross,
+  footprint circle, and a live UTC/Lat/Lon/Az/El/Range panel that steps on each
+  keypress. Same secular-J2 sub-point/footprint math as the rest of the suite.
+
+### Notes & caveats
+- **Casio native BASIC** has no character-code function, so its grid tool takes
+  Maidenhead field/square/subsquare as numbers; it also carries only the fitted
+  subset of tools above. Everything else is available in Casio **Python**.
+- **satfreq** data is a hand-maintained snapshot; satellites and frequencies
+  change — verify against the current AMSAT list.
+- **BBC BASIC** and **GW-BASIC** are the interpreter-tested ports (Matrix Brandy
+  and PC-BASIC respectively); MicroPython is the executable reference. Casio,
+  MMBasic, and both OPL dialects are verified by transcription against the
+  reference plus structural/dialect audits — first on-hardware run is a shakedown.
+- Two interpreter-specific gotchas worth knowing if you edit the ports: BBC
+  variable names must not begin with a reserved token (e.g. `ASC`); GW-BASIC main
+  programs must avoid the core's scratch variable names (`DT`, `SS`, `E2`, ...)
+  and must use integer `FOR` counters under `DEFDBL`. MMBasic programs must keep
+  `LOCAL` declarations out of loops and avoid reserved-word variable names
+  (`STEP`, `PAGE`, ...). See each folder's `*-NOTES.md`.

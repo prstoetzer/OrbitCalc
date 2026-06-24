@@ -1,0 +1,53 @@
+'Program: OORBDAT   Casio BASIC  fx-9750GIII
+'Orbital data from GP/OMM elements. Closed-form summary (no
+'propagation): semi-major axis, period, apogee/perigee,
+'velocities, J2 node/perigee drift, footprint, track shift.
+'No sub-programs required. Run in Radian mode.
+'Inputs: INC(deg) ECC MM(rev/day).
+Rad
+"OORBDAT"
+"INC DEG"?->I
+"ECC"?->E
+"MM REV/D"?->M
+M*2*Pi/86400->N                       'mean motion rad/s
+(398600.4418/N^2)^(1/3)->A            'semi-major axis km
+I*Pi/180->W                           'inclination rad
+A*(1-E)->P                            'perigee radius
+A*(1+E)->Q                            'apogee radius
+A*(1-E^2)->S                          'semi-latus rectum
+1.5*1.08262668E-3*(6378.137/S)^2*N->F 'J2 factor
+-F*cos W*180/Pi*86400->List 4[1]      'RAAN dot deg/day
+F*(2-2.5*(sin W)^2)*180/Pi*86400->List 4[2]  'ARGP dot deg/day
+sqrt (398600.4418*(2/P-1/A))->List 4[3]  'vel perigee
+sqrt (398600.4418*(2/Q-1/A))->List 4[4]  'vel apogee
+sqrt (398600.4418/A)->List 4[5]          'vel circular
+1440/M->List 4[6]                        'period min
+(Q+P)/2->T                               'mean radius
+cos^-1 (6378.137/T)->List 4[7]           'footprint half-angle rad
+360/M->List 4[8]                         'lon shift per orbit
+Cls
+"A KM"
+A_/
+"PERIOD MIN"
+List 4[6]_/
+"APOGEE KM"
+Q-6378.137_/
+"PERIGEE KM"
+P-6378.137_/
+"V PERI KM/S"
+List 4[3]_/
+"V APO KM/S"
+List 4[4]_/
+"V CIRC KM/S"
+List 4[5]_/
+"RAAN DOT D/DAY"
+List 4[1]_/
+"ARGP DOT D/DAY"
+List 4[2]_/
+"FOOTPRINT DEG"
+List 4[7]*180/Pi_/
+"FOOT RAD KM"
+List 4[7]*6378.137_/
+"LON/ORBIT W"
+List 4[8]_/
+"73"

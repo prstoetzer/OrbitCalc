@@ -1,0 +1,281 @@
+REM DXGRID for BBC BASIC - footprint grid-square enumerator
+REM Lists Maidenhead fields under the current footprint.
+kP = 4 * ATN(1)
+kP2 = 2 * kP
+kD = kP / 180
+kR = 180 / kP
+MU = 398600.4418
+RE = 6378.137
+J2 = 1.08262668E-3
+:
+DIM SEEN$(200)
+:
+PRINT "=== DXGRID (BBC BASIC) ==="
+INPUT "INC: " INC
+INPUT "ECC: " ECC
+INPUT "RAAN: " RAAN
+INPUT "ARGP: " ARGP
+INPUT "MA: " MAN
+INPUT "MM: " MM
+PRINT "Epoch UTC:"
+INPUT "  Yr: " EY
+INPUT "  Mo: " EMO
+INPUT "  Dy: " ED
+INPUT "  Hr: " EH
+INPUT "  Mi: " EMI
+INPUT "  Sc: " ES
+PRINT "Now UTC:"
+INPUT "  Yr: " NY
+INPUT "  Mo: " NMO
+INPUT "  Dy: " ND
+INPUT "  Hr: " NH
+INPUT "  Mi: " NMI
+PROCsetsat(INC, ECC, RAAN, ARGP, MAN, MM, FNjd(EY, EMO, ED, EH, EMI, ES))
+NOW = FNjd(NY, NMO, ND, NH, NMI, 0)
+PROCsubrad(NOW)
+PRINT "Sub-point "; FNr2(SLATD); ","; FNr2(SLOND); " foot "; FNr2(RHOD); " deg"
+PRINT "Fields in view:"
+NS = 0
+LAT = -88
+REPEAT
+LON = -178
+REPEAT
+IF FNgc(SLATD, SLOND, LAT, LON) <= RHOD THEN PROCaddll(LAT, LON)
+LON = LON + 4
+UNTIL LON > 178
+LAT = LAT + 4
+UNTIL LAT > 88
+PROCprintfields
+PRINT "("; NS; " fields at least partly in view)"
+END
+:
+DEF PROCsubrad(j)
+LOCAL r
+PROCecef(j)
+SLATD = FNatan2(EZ, SQR(EX * EX + EY * EY)) * kR
+SLOND = FNatan2(EY, EX) * kR
+PROCeci(j)
+r = SQR(GX * GX + GY * GY + GZ * GZ)
+RHOD = FNacos(RE / r) * kR
+ENDPROC
+:
+DEF FNgc(la1, lo1, la2, lo2)
+LOCAL a, b, dl, c
+a = la1 * kD : b = la2 * kD
+dl = (lo2 - lo1) * kD
+c = SIN(a) * SIN(b) + COS(a) * COS(b) * COS(dl)
+IF c > 1 THEN c = 1
+IF c < -1 THEN c = -1
+= FNacos(c) * kR
+:
+DEF FNacos(x)
+LOCAL v
+v = x
+IF v > 1 THEN v = 1
+IF v < -1 THEN v = -1
+= kP / 2 - ATN(v / SQR(1 - v * v + 1E-18))
+:
+DEF PROCaddll(lat, lon)
+LOCAL x, y, f$, i, dup
+x = lon + 180 : y = lat + 90
+f$ = CHR$(65 + INT(x / 20)) + CHR$(65 + INT(y / 10))
+dup = 0
+FOR i = 1 TO NS
+IF SEEN$(i) = f$ THEN dup = 1
+NEXT i
+IF dup = 0 THEN NS = NS + 1 : SEEN$(NS) = f$
+ENDPROC
+:
+DEF PROCprintfields
+LOCAL i, line$
+line$ = ""
+FOR i = 1 TO NS
+line$ = line$ + SEEN$(i) + " "
+IF i MOD 10 = 0 THEN PRINT line$ : line$ = ""
+NEXT i
+IF line$ <> "" THEN PRINT line$
+ENDPROC
+:
+DEF FNr2(x)
+= INT(x * 100 + 0.5) / 100
+:
+DEF PROCsetsat(inc, ecc, raan, argp, ma, mmd, ep)
+SI0 = inc * kD
+SE = ecc
+SR0 = raan * kD
+SP0 = argp * kD
+SM0 = ma * kD
+SN0 = mmd * kP2 / 86400
+SEP = ep
+SA = (MU / (SN0 * SN0)) ^ (1/3)
+LOCAL p, f, ci, si
+p = SA * (1 - SE * SE)
+f = 1.5 * J2 * (RE / p) ^ 2 * SN0
+ci = COS(SI0)
+si = SIN(SI0)
+SRD = -f * ci
+SPD = f * (2 - 2.5 * si * si)
+ENDPROC
+:
+REM ===== Julian date from calendar =======
+DEF FNjd(y, mo, d, h, mi, s)
+LOCAL a, b
+IF mo <= 2 THEN y = y - 1 : mo = mo + 12
+a = INT(y / 100)
+b = 2 - a + INT(a / 4)
+= INT(365.25 * (y + 4716)) + INT(30.6001 * (mo + 1)) + d + b - 1524.5 + (h + mi / 60 + s / 3600) / 24
+:
+REM ===== GMST (radians) ==================
+DEF FNgmst(jd)
+LOCAL t, g
+t = (jd - 2451545) / 36525
+g = 280.46061837 + 360.98564736629 * (jd - 2451545) + 0.000387933 * t * t - t * t * t / 38710000
+g = g - 360 * INT(g / 360)
+IF g < 0 THEN g = g + 360
+= g * kD
+:
+REM ===== Kepler solver ===================
+DEF FNkepler(m, e)
+LOCAL x, dx, k
+x = m
+FOR k = 1 TO 50
+  dx = (x - e * SIN(x) - m) / (1 - e * COS(x))
+  x = x - dx
+  IF ABS(dx) < 1E-12 THEN k = 50
+NEXT
+= x
+:
+REM ===== ECI position at jd ==============
+REM results in GX,GY,GZ
+DEF PROCeci(jd)
+LOCAL dt, m, raan, argp, ee, xo, yo, u, r
+LOCAL co, so, cu, su, ci, si
+dt = (jd - SEP) * 86400
+m = SM0 + SN0 * dt
+raan = SR0 + SRD * dt
+argp = SP0 + SPD * dt
+m = m - kP2 * INT(m / kP2)
+ee = FNkepler(m, SE)
+xo = SA * (COS(ee) - SE)
+yo = SA * SQR(1 - SE * SE) * SIN(ee)
+u = FNatan2(yo, xo) + argp
+r = SQR(xo * xo + yo * yo)
+co = COS(raan) : so = SIN(raan)
+cu = COS(u) : su = SIN(u)
+ci = COS(SI0) : si = SIN(SI0)
+GX = r * (co * cu - so * su * ci)
+GY = r * (so * cu + co * su * ci)
+GZ = r * (su * si)
+ENDPROC
+:
+REM ===== ECEF position at jd =============
+REM results in EX,EY,EZ
+DEF PROCecef(jd)
+LOCAL g, cg, sg
+PROCeci(jd)
+g = FNgmst(jd)
+cg = COS(g) : sg = SIN(g)
+EX = cg * GX + sg * GY
+EY = -sg * GX + cg * GY
+EZ = GZ
+ENDPROC
+:
+REM ===== sub-point ======================
+REM results in SLAT,SLON (radians)
+DEF PROCsubpt(jd)
+PROCecef(jd)
+SLON = FNatan2(EY, EX)
+SLAT = FNatan2(EZ, SQR(EX * EX + EY * EY))
+ENDPROC
+:
+REM ===== look angles ====================
+REM results in LEL,LAZ (radians)
+DEF PROClook(jd, la, lo)
+LOCAL clat, slat, clon, slon, ox, oy, oz
+LOCAL rx, ry, rz, s, e, zz, rng
+PROCecef(jd)
+clat = COS(la) : slat = SIN(la)
+clon = COS(lo) : slon = SIN(lo)
+ox = RE * clat * clon
+oy = RE * clat * slon
+oz = RE * slat
+rx = EX - ox : ry = EY - oy : rz = EZ - oz
+s = slat * clon * rx + slat * slon * ry - clat * rz
+e = -slon * rx + clon * ry
+zz = clat * clon * rx + clat * slon * ry + slat * rz
+rng = SQR(rx * rx + ry * ry + rz * rz)
+LRNG = rng
+LEL = ASN(zz / rng)
+LAZ = FNatan2(e, -s)
+IF LAZ < 0 THEN LAZ = LAZ + kP2
+ENDPROC
+:
+REM ===== two-arg atan2 ==================
+DEF FNatan2(y, x)
+IF x > 0 THEN = ATN(y / x)
+IF x < 0 AND y >= 0 THEN = ATN(y / x) + kP
+IF x < 0 AND y < 0 THEN = ATN(y / x) - kP
+IF x = 0 AND y > 0 THEN = kP / 2
+IF x = 0 AND y < 0 THEN = -kP / 2
+= 0
+:
+REM ===== Maidenhead -> OLAT,OLON ========
+DEF PROCmaiden(g$)
+LOCAL u$, lo, la
+u$ = FNupper(g$)
+lo = (ASC(MID$(u$,1,1)) - 65) * 20 - 180
+la = (ASC(MID$(u$,2,1)) - 65) * 10 - 90
+lo = lo + (ASC(MID$(u$,3,1)) - 48) * 2
+la = la + (ASC(MID$(u$,4,1)) - 48)
+IF LEN(u$) >= 6 THEN lo = lo + (ASC(MID$(u$,5,1)) - 65) / 12 + 1/24 : la = la + (ASC(MID$(u$,6,1)) - 65) / 24 + 1/48 ELSE lo = lo + 1 : la = la + 0.5
+OLAT = la * kD
+OLON = lo * kD
+ENDPROC
+:
+DEF FNupper(a$)
+LOCAL i, c, r$
+r$ = ""
+FOR i = 1 TO LEN(a$)
+  c = ASC(MID$(a$, i, 1))
+  IF c >= 97 AND c <= 122 THEN c = c - 32
+  r$ = r$ + CHR$(c)
+NEXT
+= r$
+:
+REM ===== calendar from jd ===============
+REM results in CY,CMO,CD,CH,CMI,CS
+DEF PROCcal(jd)
+LOCAL z, f, al, a, b, c, dd, e, day, secs
+jd = jd + 0.5
+z = INT(jd) : f = jd - z
+IF z < 2299161 THEN a = z ELSE al = INT((z - 1867216.25) / 36524.25) : a = z + 1 + al - INT(al / 4)
+b = a + 1524
+c = INT((b - 122.1) / 365.25)
+dd = INT(365.25 * c)
+e = INT((b - dd) / 30.6001)
+day = b - dd - INT(30.6001 * e) + f
+IF e < 14 THEN CMO = e - 1 ELSE CMO = e - 13
+IF CMO > 2 THEN CY = c - 4716 ELSE CY = c - 4715
+CD = INT(day)
+secs = (day - CD) * 86400
+CH = INT(secs / 3600) : secs = secs - CH * 3600
+CMI = INT(secs / 60)
+CS = secs - CMI * 60
+ENDPROC
+:
+REM ===== format helpers =================
+DEF FN2(n)
+IF n < 10 THEN = "0" + STR$(n)
+= STR$(n)
+:
+DEF FNlonfmt(lond)
+IF lond >= 0 THEN = FNr1(lond) + " E"
+= FNr1(-lond) + " W"
+:
+DEF FNr1(x)
+LOCAL w, frac
+w = INT(x)
+frac = INT((x - w) * 10 + 0.5)
+IF frac >= 10 THEN w = w + 1 : frac = 0
+= STR$(w) + "." + STR$(frac)
+:

@@ -36,7 +36,11 @@ centred on the pole of your hemisphere — and overlays:
   hemisphere is at the centre and the **equator is the rim** — the far
   hemisphere is not drawn. Track, footprint, range circle and the satellite dot
   are clipped at the equator, so the satellite leaves the board when it crosses
-  into the other hemisphere, just like a real OSCARLOCATOR overlay.
+  into the other hemisphere, just like a real OSCARLOCATOR overlay. The disc is
+  drawn as if looking down on the pole from space (north-centred, 0° longitude
+  at the top), so **east longitudes are to the left and west to the right** —
+  the coastlines read the same way as a real north-polar OSCARLOCATOR, not like
+  a flat wall map.
 - Orbit model: secular-J2 mean elements + Kepler — the same verified core as
   OrbitCalc/SATTRACK. Reference geometry for planning, not precise pointing;
   refresh elements every few days.

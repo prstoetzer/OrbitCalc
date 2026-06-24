@@ -1,0 +1,63 @@
+REM ORBDATA - OPL for Psion Series 3c (SIBO)
+REM Orbital data from GP/OMM elements (closed-form, no propagation).
+REM Type in the Program editor and Translate (Ctrl+T). Module: ORBDATA
+GLOBAL kP, kP2, kDg, kRd, gMU, gRE, gJ2
+
+PROC main:
+  kP = PI
+  kP2 = 2.0 * kP
+  kDg = kP / 180.0
+  kRd = 180.0 / kP
+  gMU = 398600.4418
+  gRE = 6378.137
+  gJ2 = 0.00108262668
+  LOCAL inc, ecc, mm, n, a, i, rp, ra, p, f
+  LOCAL raandot, argpdot, vp, va, vc, per, foot, shift
+  PRINT "=== ORBDATA (Series 3c) ==="
+  PRINT "INCLINATION deg: ";
+  INPUT inc
+  PRINT "ECCENTRICITY: ";
+  INPUT ecc
+  PRINT "MEAN_MOTION rev/day: ";
+  INPUT mm
+  n = mm * kP2 / 86400.0
+  a = (gMU / (n * n)) ** (1.0/3.0)
+  i = inc * kDg
+  rp = a * (1.0 - ecc)
+  ra = a * (1.0 + ecc)
+  p = a * (1.0 - ecc * ecc)
+  f = 1.5 * gJ2 * (gRE / p) ** 2 * n
+  raandot = -f * COS(i) * kRd * 86400.0
+  argpdot = f * (2.0 - 2.5 * SIN(i) ** 2) * kRd * 86400.0
+  vp = SQR(gMU * (2.0/rp - 1.0/a))
+  va = SQR(gMU * (2.0/ra - 1.0/a))
+  vc = SQR(gMU / a)
+  per = 1440.0 / mm
+  foot = acos:(gRE / ((ra + rp) / 2.0))
+  shift = 360.0 / mm
+  PRINT "a    ";FIX$(a,1,9);" km"
+  PRINT "per  ";FIX$(per,2,8);" min"
+  PRINT "apo  ";FIX$(ra-gRE,1,8);" km"
+  PRINT "peri ";FIX$(rp-gRE,1,8);" km"
+  PRINT "Vp   ";FIX$(vp,4,7);" km/s"
+  PRINT "Va   ";FIX$(va,4,7);" km/s"
+  PRINT "Vc   ";FIX$(vc,4,7);" km/s"
+  PRINT "dRAAN ";FIX$(raandot,4,8);" d/dy"
+  PRINT "dARGP ";FIX$(argpdot,4,8);" d/dy"
+  PRINT "foot ";FIX$(foot*kRd,1,5);" deg"
+  PRINT "lon/orb ";FIX$(shift,2,6);" W"
+  PRINT "Press a key"
+  GET
+ENDP
+
+PROC acos:(x)
+  LOCAL v
+  v = x
+  IF v > 1.0
+    v = 1.0
+  ENDIF
+  IF v < -1.0
+    v = -1.0
+  ENDIF
+  RETURN kP/2.0 - ATAN(v / SQR(1.0 - v*v + 0.000000000000001))
+ENDP

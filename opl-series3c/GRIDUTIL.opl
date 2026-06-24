@@ -1,0 +1,112 @@
+REM GRIDUTIL - OPL for Psion Series 3c (SIBO)
+REM Maidenhead grid <-> lat/lon, bearing & distance. Module: GRIDUTIL
+GLOBAL kP, kDg, kRd, gGRE
+GLOBAL gLat, gLon, gBrg, gDst
+
+PROC main:
+  kP = PI
+  kDg = kP / 180.0
+  kRd = 180.0 / kP
+  gGRE = 6371.0
+  LOCAL m%, g$, la, lo, la1, lo1, la2, lo2
+  PRINT "=== GRIDUTIL (Series 3c) ==="
+  PRINT "1 grid>ll  2 ll>grid  3 brg/dist"
+  PRINT "Choose 1/2/3: ";
+  INPUT m%
+  IF m% = 1
+    PRINT "Grid: ";
+    INPUT g$
+    gridll:(g$)
+    PRINT g$;" = ";FIX$(gLat,4,8);" N ";FIX$(gLon,4,9);" E"
+  ELSEIF m% = 2
+    PRINT "Lat +N: ";
+    INPUT la
+    PRINT "Lon +E: ";
+    INPUT lo
+    PRINT "Grid = ";lltogrid$:(la, lo)
+  ELSE
+    PRINT "From grid: ";
+    INPUT g$
+    gridll:(g$)
+    la1 = gLat
+    lo1 = gLon
+    PRINT "To grid: ";
+    INPUT g$
+    gridll:(g$)
+    la2 = gLat
+    lo2 = gLon
+    bear:(la1, lo1, la2, lo2)
+    PRINT "Bearing ";FIX$(gBrg,0,3);" deg"
+    PRINT "Dist ";FIX$(gDst,0,6);" km"
+  ENDIF
+  PRINT "Press a key"
+  GET
+ENDP
+
+PROC gridll:(g$)
+  LOCAL u$
+  u$ = UPPER$(g$)
+  gLon = (ASC(MID$(u$,1,1)) - 65) * 20 - 180
+  gLat = (ASC(MID$(u$,2,1)) - 65) * 10 - 90
+  gLon = gLon + (ASC(MID$(u$,3,1)) - 48) * 2
+  gLat = gLat + (ASC(MID$(u$,4,1)) - 48)
+  IF LEN(u$) >= 6
+    gLon = gLon + (ASC(MID$(u$,5,1)) - 65) / 12.0 + 1.0/24.0
+    gLat = gLat + (ASC(MID$(u$,6,1)) - 65) / 24.0 + 1.0/48.0
+  ELSE
+    gLon = gLon + 1.0
+    gLat = gLat + 0.5
+  ENDIF
+ENDP
+
+PROC lltogrid$:(la, lo)
+  LOCAL x, y, fa%, fb%, sa%, sb%, ea%, eb%
+  x = lo + 180.0
+  y = la + 90.0
+  fa% = INT(x / 20.0)
+  fb% = INT(y / 10.0)
+  sa% = INT((x - fa% * 20) / 2.0)
+  sb% = INT(y - fb% * 10)
+  ea% = INT(((x/2.0) - INT(x/2.0)) * 24.0)
+  eb% = INT((y - INT(y)) * 24.0)
+  RETURN CHR$(65+fa%) + CHR$(65+fb%) + NUM$(sa%,1) + NUM$(sb%,1) + CHR$(97+ea%) + CHR$(97+eb%)
+ENDP
+
+PROC bear:(la1, lo1, la2, lo2)
+  LOCAL a, b, c, d, dl, y, x, cd
+  a = la1 * kDg
+  b = lo1 * kDg
+  c = la2 * kDg
+  d = lo2 * kDg
+  dl = d - b
+  y = SIN(dl) * COS(c)
+  x = COS(a) * SIN(c) - SIN(a) * COS(c) * COS(dl)
+  gBrg = atan2b:(y, x) * kRd
+  IF gBrg < 0.0
+    gBrg = gBrg + 360.0
+  ENDIF
+  cd = SIN(a) * SIN(c) + COS(a) * COS(c) * COS(dl)
+  IF cd > 1.0
+    cd = 1.0
+  ENDIF
+  IF cd < -1.0
+    cd = -1.0
+  ENDIF
+  gDst = (kP/2.0 - ATAN(cd / SQR(1.0 - cd*cd + 0.000000000000001))) * gGRE
+ENDP
+
+PROC atan2b:(y, x)
+  IF x > 0.0
+    RETURN ATAN(y / x)
+  ENDIF
+  IF x < 0.0 AND y >= 0.0
+    RETURN ATAN(y / x) + kP
+  ENDIF
+  IF x < 0.0 AND y < 0.0
+    RETURN ATAN(y / x) - kP
+  ENDIF
+  IF x = 0.0 AND y > 0.0
+    RETURN kP / 2.0
+  ENDIF
+  RETURN -kP / 2.0
+ENDP

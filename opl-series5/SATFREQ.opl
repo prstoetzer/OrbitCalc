@@ -1,0 +1,71 @@
+REM SATFREQ - frequency & mode reference card. Module: SATFREQ
+REM Snapshot 2026-06; verify against current AMSAT list before a pass.
+GLOBAL nm$(12,8), up(12), dn(12), md$(12,8), inv%(12), tn$(12,6), nt$(12,22)
+
+PROC main:
+  LOCAL q$, i%, hit%
+  fill:
+  PRINT "=== SATFREQ (Series 5) ==="
+  PRINT "snapshot 2026-06; verify!"
+  PRINT "name/part, L=list, Q=quit"
+  WHILE 1
+    PRINT "> ";
+    INPUT q$
+    q$ = UPPER$(q$)
+    IF q$ = "Q"
+      BREAK
+    ENDIF
+    IF q$ = "L"
+      i% = 1
+      WHILE i% <= 12
+        PRINT "  ";nm$(i%)
+        i% = i% + 1
+      ENDWH
+    ELSEIF q$ <> ""
+      hit% = 0
+      i% = 1
+      WHILE i% <= 12
+        IF INSTR(nm$(i%), q$) > 0
+          show:(i%)
+          hit% = 1
+        ENDIF
+        i% = i% + 1
+      ENDWH
+      IF hit% = 0
+        PRINT "No match. L=list"
+      ENDIF
+    ENDIF
+  ENDWH
+ENDP
+
+PROC show:(i%)
+  PRINT nm$(i%)
+  PRINT "  Up   ";FIX$(up(i%),3,9);" MHz"
+  PRINT "  Down ";FIX$(dn(i%),3,9);" MHz"
+  IF inv%(i%) = 1
+    PRINT "  Mode ";md$(i%);" inv"
+  ELSE
+    PRINT "  Mode ";md$(i%);" non-inv"
+  ENDIF
+  IF tn$(i%) <> ""
+    PRINT "  Tone ";tn$(i%);" Hz"
+  ENDIF
+  IF nt$(i%) <> ""
+    PRINT "  Note ";nt$(i%)
+  ENDIF
+ENDP
+
+PROC fill:
+  nm$(1)="AO-7-A" :up(1)=145.850 :dn(1)=29.400 :md$(1)="SSB/CW":inv%(1)=0:tn$(1)="":nt$(1)="Mode A sunlit only"
+  nm$(2)="AO-7-B" :up(2)=432.125 :dn(2)=145.975 :md$(2)="SSB/CW":inv%(2)=1:tn$(2)="":nt$(2)="Mode B inv sunlit"
+  nm$(3)="AO-27"  :up(3)=145.850 :dn(3)=436.795 :md$(3)="FM"    :inv%(3)=0:tn$(3)="":nt$(3)="FM schedule-gated"
+  nm$(4)="AO-91"  :up(4)=435.250 :dn(4)=145.960 :md$(4)="FM"    :inv%(4)=0:tn$(4)="67.0":nt$(4)="Fox-1 67Hz"
+  nm$(5)="SO-50"  :up(5)=145.850 :dn(5)=436.795 :md$(5)="FM"    :inv%(5)=0:tn$(5)="67.0":nt$(5)="74.4 arms timer"
+  nm$(6)="ISS-FM" :up(6)=145.990 :dn(6)=437.800 :md$(6)="FM"    :inv%(6)=0:tn$(6)="67.0":nt$(6)="Crossband FM"
+  nm$(7)="ISS-AP" :up(7)=145.825 :dn(7)=145.825 :md$(7)="APRS"  :inv%(7)=0:tn$(7)="":nt$(7)="APRS digipeater"
+  nm$(8)="FO-29"  :up(8)=145.900 :dn(8)=435.800 :md$(8)="SSB/CW":inv%(8)=1:tn$(8)="":nt$(8)="Linear inv gated"
+  nm$(9)="RS-44"  :up(9)=145.965 :dn(9)=435.640 :md$(9)="SSB/CW":inv%(9)=1:tn$(9)="":nt$(9)="Linear inv wide"
+  nm$(10)="PO-101":up(10)=437.500:dn(10)=145.900:md$(10)="FM"   :inv%(10)=0:tn$(10)="141.3":nt$(10)="Diwata-2 gated"
+  nm$(11)="TEVEL" :up(11)=145.970:dn(11)=436.400:md$(11)="FM"   :inv%(11)=0:tn$(11)="67.0":nt$(11)="TEVEL per-sat"
+  nm$(12)="QO-100":up(12)=2400.250:dn(12)=10489.750:md$(12)="SSB/CW":inv%(12)=1:tn$(12)="":nt$(12)="GEO NB Eshail-2"
+ENDP

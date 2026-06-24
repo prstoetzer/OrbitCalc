@@ -90,3 +90,21 @@ Casio fx-9750GIII CASIO BASIC — OPASS (graphical) plus the text-mode ODOPLR, O
 (The mutual-window finder is text-only on all platforms — there's nothing
 inherently graphical about a window table. Doppler and Sun/eclipse are graphical
 on the PicoCalc and Casio Python, and text-mode in CASIO BASIC.)
+
+## Graphical satellite trackers (world map)
+
+- `bbc-sattrack.png` - SATTRACKG.BBC running on BBC BASIC (MODE 1, 1280x1024
+  logical). Equirectangular world map with 30-degree graticule, brighter
+  equator, observer QTH cross, sub-satellite boxed cross, footprint boundary
+  circle, and a live UTC / Lat / Lon / Az / El / Range panel. Steps the clock
+  on each keypress. Uses only portable MOVE/DRAW primitives (no RECTANGLE or
+  CIRCLE FILL) so it runs on real Acorn hardware and BBCSDL, not just Brandy.
+- `gw-sattrack.png` - SATTRACK.BAS running on GW-BASIC (SCREEN 2, 640x200 CGA
+  mono). Same map, footprint circle, observer and sub-satellite markers, with
+  top/bottom status lines. Runs in GW-BASIC / BASICA / PC-BASIC.
+
+Both share the same secular-J2 sub-point and footprint-radius math as the rest
+of the suite; verified against the AO-7 reference (sub-point 12.99,-86.70,
+footprint 35.5 deg). The PNGs are faithful mockups of the on-screen output -
+BBC graphics can't be captured under the console Brandy build, and GW-BASIC
+graphics need a display; the GW program itself tokenizes cleanly under PC-BASIC.

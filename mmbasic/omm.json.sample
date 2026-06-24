@@ -1,0 +1,38 @@
+[
+    {
+        "AMSAT_NAME": "AO-07",
+        "OBJECT_NAME": "OSCAR 7",
+        "INCLINATION": 101.9899,
+        "ECCENTRICITY": 0.00126264,
+        "RA_OF_ASC_NODE": 186.8122,
+        "ARG_OF_PERICENTER": 120.264,
+        "MEAN_ANOMALY": 33.9567,
+        "MEAN_MOTION": 12.53698175,
+        "EPOCH": "2026-06-22T12:14:23.563680",
+        "NORAD_CAT_ID": 7530
+    },
+    {
+        "AMSAT_NAME": "SO-50",
+        "OBJECT_NAME": "SAUDISAT 1C",
+        "INCLINATION": 64.5516,
+        "ECCENTRICITY": 0.00751442,
+        "RA_OF_ASC_NODE": 113.4366,
+        "ARG_OF_PERICENTER": 261.5322,
+        "MEAN_ANOMALY": 97.7262,
+        "MEAN_MOTION": 14.83055677,
+        "EPOCH": "2026-06-22T05:06:17.803584",
+        "NORAD_CAT_ID": 27607
+    },
+    {
+        "AMSAT_NAME": "ISS",
+        "OBJECT_NAME": "ISS (ZARYA)",
+        "INCLINATION": 51.6325,
+        "ECCENTRICITY": 0.00044556,
+        "RA_OF_ASC_NODE": 272.6245,
+        "ARG_OF_PERICENTER": 218.971,
+        "MEAN_ANOMALY": 141.0958,
+        "MEAN_MOTION": 15.49373286,
+        "EPOCH": "2026-06-22T17:40:44.812992",
+        "NORAD_CAT_ID": 25544
+    }
+]

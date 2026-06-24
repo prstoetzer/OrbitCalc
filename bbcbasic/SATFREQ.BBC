@@ -1,0 +1,68 @@
+REM SATFREQ for BBC BASIC - frequency & mode reference card
+REM Snapshot 2026-06; verify against current AMSAT list before a pass.
+:
+NS = 12
+DIM NM$(NS), UP(NS), DN(NS), MD$(NS), INV(NS), TN$(NS), NT$(NS)
+FOR I = 1 TO NS
+READ NM$(I), UP(I), DN(I), MD$(I), INV(I), TN$(I), NT$(I)
+NEXT I
+:
+PRINT "=== SATFREQ (BBC BASIC) ==="
+PRINT "Snapshot 2026-06; verify before a pass"
+PRINT "Name (or part), L=list, Q=quit"
+REPEAT
+INPUT "> " Q$
+Q$ = FNupper(Q$)
+IF Q$ = "L" THEN PROClist
+IF Q$ <> "L" AND Q$ <> "Q" AND Q$ <> "" THEN PROCfind(Q$)
+UNTIL Q$ = "Q"
+END
+:
+DEF PROClist
+LOCAL I
+FOR I = 1 TO NS
+PRINT "  "; NM$(I)
+NEXT I
+ENDPROC
+:
+DEF PROCfind(q$)
+LOCAL I, hit
+hit = 0
+FOR I = 1 TO NS
+IF INSTR(FNupper(NM$(I)), q$) > 0 THEN PROCshow(I) : hit = 1
+NEXT I
+IF hit = 0 THEN PRINT "No match. L lists all."
+ENDPROC
+:
+DEF PROCshow(I)
+PRINT NM$(I)
+PRINT "  Up   : "; UP(I); " MHz"
+PRINT "  Down : "; DN(I); " MHz"
+IF INV(I) = 1 THEN PRINT "  Mode : "; MD$(I); " (inverting)" ELSE PRINT "  Mode : "; MD$(I); " (non-inv)"
+IF TN$(I) <> "" THEN PRINT "  Tone : "; TN$(I); " Hz"
+IF NT$(I) <> "" THEN PRINT "  Note : "; NT$(I)
+ENDPROC
+:
+DEF FNupper(a$)
+LOCAL i, c, r$
+r$ = ""
+FOR i = 1 TO LEN(a$)
+c = ASC(MID$(a$, i, 1))
+IF c >= 97 AND c <= 122 THEN c = c - 32
+r$ = r$ + CHR$(c)
+NEXT i
+= r$
+:
+REM name, up, down, mode, inverting, tone, note
+DATA "AO-7-A", 145.850, 29.400, "SSB/CW", 0, "", "Mode A non-inv sunlit only"
+DATA "AO-7-B", 432.125, 145.975, "SSB/CW", 1, "", "Mode B inverting sunlit only"
+DATA "AO-27", 145.850, 436.795, "FM", 0, "", "FM schedule-gated"
+DATA "AO-91", 435.250, 145.960, "FM", 0, "67.0", "Fox-1 67Hz tone"
+DATA "SO-50", 145.850, 436.795, "FM", 0, "67.0", "67Hz; 74.4Hz arms timer"
+DATA "ISS-FM", 145.990, 437.800, "FM", 0, "67.0", "Crossband FM repeater"
+DATA "ISS-APRS", 145.825, 145.825, "APRS", 0, "", "APRS digipeater simplex"
+DATA "FO-29", 145.900, 435.800, "SSB/CW", 1, "", "Linear inverting gated"
+DATA "RS-44", 145.965, 435.640, "SSB/CW", 1, "", "Linear inverting wide"
+DATA "PO-101", 437.500, 145.900, "FM", 0, "141.3", "Diwata-2 FM gated"
+DATA "TEVEL", 145.970, 436.400, "FM", 0, "67.0", "TEVEL CubeSats per-sat varies"
+DATA "QO-100", 2400.250, 10489.750, "SSB/CW", 1, "", "GEO NB transponder"

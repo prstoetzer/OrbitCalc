@@ -23,6 +23,13 @@ screen readable.
 - Right column = read-out (UTC time, sub-point lat/lon; the Python build also
   shows Az/El)
 
+**Orientation:** the map is drawn as if you are looking down on the pole from
+space — north-centred with 0° longitude at the top, so **east longitudes fall to
+the left and west longitudes to the right** (the mirror image of a flat wall
+map, and the same way a real north-polar OSCARLOCATOR disc reads). For the
+southern hemisphere the view is from below the south pole, so east is to the
+right. (An earlier version had the east–west sense flipped; that is corrected.)
+
 When the satellite crosses into the other hemisphere it simply leaves the disc,
 exactly as it would on a real OSCARLOCATOR overlay.
 

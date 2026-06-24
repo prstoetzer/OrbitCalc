@@ -200,7 +200,9 @@ def project(latr, lonr):
         rho = (PI / 2 + latr)
         theta = -lonr
     r = rho / (PI / 2)
-    px = int(CX + r * RR * math.sin(theta) + 0.5)
+    # East is counterclockwise when looking down on the north pole, so the
+    # x term is subtracted (a +sin here mirrors the map east-west).
+    px = int(CX - r * RR * math.sin(theta) + 0.5)
     py = int(CY - r * RR * math.cos(theta) + 0.5)
     ok = 1 if rho <= PI / 2 else 0
     return px, py, ok
