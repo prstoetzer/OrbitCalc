@@ -49,7 +49,7 @@ pass you actually track. Present on every platform as `oscarlocator.py` /
 
 The flagship graphical application, for the PicoCalc's 320x320 colour screen. It
 keeps a small on-device catalogue of satellites and your station, and presents a
-thirteen-item menu of views and tools. In addition to the orbit math shared with the
+fourteen-item menu of views and tools. In addition to the orbit math shared with the
 rest of the suite, SATTRACK adds hardware- and display-oriented features the
 console tools don't have:
 
@@ -81,10 +81,13 @@ console tools don't have:
     sunlit/eclipse, with a Sun glyph and an AOS/TCA/LOS/max-elevation readout.
 13. **Sun position** — a live sky dial of the Sun's azimuth and elevation from your
     station, plus the subsolar point, for solar-noise and daylight-pass planning.
+14. **Download AMSAT GP (WiFi)** — fetches the AMSAT daily bulletin directly over
+    HTTPS and imports it, on WiFi-capable firmware (WebMite on a Pico W / Pico 2 W);
+    on non-WiFi builds it falls back to the SD-card import.
 
 Items 11-13 are inspired by features in CardSat, adapted to the PicoCalc and using
-no external devices. They are reached with the **A**, **B**, **C** keys (or by
-scrolling the menu).
+no external devices. They are reached with the **A**, **B**, **C** keys; the WiFi
+download is **D** (or by scrolling the menu).
 
 ### OSCARLOCATOR view & OSCARMAP — azimuthal plotting (PicoCalc, MMBasic)
 
@@ -161,7 +164,7 @@ practically support. Counts below are program files, excluding docs and data.
 |---|---|---|---|
 | MicroPython (desktop / MCU) | `micropython/` | both cores + all 19 tools (reference implementations) | — |
 | Casio fx-9750GIII | `casio-fx9750giii/` | Python: both cores + 16 tools; native BASIC: cores + a fitted subset | DOPPLER, PASSPLOT, SUNECL, MUTUAL, OSCARLOCATOR map (`CASIO-NOTES.md`) |
-| MMBasic / PicoCalc | `mmbasic/` | both cores + all 19 tools | **SATTRACK** (13-view app), **OSCARMAP**, DOPPLER, PASSPLOT, SUNECL, MUTUAL |
+| MMBasic / PicoCalc | `mmbasic/` | both cores + all 19 tools | **SATTRACK** (14-view app), **OSCARMAP**, DOPPLER, PASSPLOT, SUNECL, MUTUAL |
 | BBC BASIC | `bbcbasic/` | both cores + all 19 tools — **run-tested under Matrix Brandy** | **SATTRACKG** graphical world map |
 | GW-BASIC / BASICA | `gwbasic/` | both cores + all 19 tools — **run-verified under PC-BASIC** | **SATTRACK** graphical world map |
 | OPL — Psion Series 5 | `opl-series5/` | both cores + all 19 tools | — |

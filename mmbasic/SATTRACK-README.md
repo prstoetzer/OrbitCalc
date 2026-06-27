@@ -13,7 +13,7 @@ MMBasic (PicoMite) application for the ClockworkPi PicoCalc (320x320 LCD).
    `omm.json.sample`.
 4. At the MMBasic prompt:  `RUN "B:/SATTRACK.bas"`
 
-## Menu (13 items)
+## Menu (14 items)
 1. **Set location / date / time** — Maidenhead grid or lat/lon. For the clock,
    press **R** to read the PicoCalc's real-time clock (assumed UTC) or **M** to
    type the UTC date/time. Saved to `B:/loc.dat`.
@@ -83,12 +83,44 @@ C. **Sun position + glyph** — a live sky dial showing the Sun's azimuth and
    elevation from your station (with the Sun plotted on the dome when it is up),
    plus the subsolar latitude/longitude. Useful for avoiding solar-noise transits
    and for telling whether a sunlight-only bird's passes fall in daylight.
+D. **Download AMSAT GP (WiFi)** — fetches the AMSAT daily bulletin
+   (`daily-bulletin.json`) directly over the network, saves it to `B:/amsat.json`,
+   and loads it with the same parser used for SD-card imports. **This needs the
+   WiFi build of MMBasic (WebMite) on a Pico W / Pico 2 W with WiFi already
+   configured** (see below). On a non-WiFi PicoMite it detects the absence of
+   networking and tells you to use the SD import (menu 3) instead — it will not
+   crash. The bulletin is HTTPS, so the firmware must include the TLS client.
 
 ## Controls
 Arrow Up/Down + Enter to choose, or the shortcut keys **1-9**, **0**
-(OSCARLOCATOR), and **A**/**B**/**C** (pass watch / pass detail / Sun view). The
-menu scrolls if it doesn't all fit. ESC backs out or quits; Backspace edits text
-fields. In the scrolling satellite lists, Left/Right page up/down.
+(OSCARLOCATOR), and **A**/**B**/**C**/**D** (pass watch / pass detail / Sun view /
+download). The menu scrolls if it doesn't all fit. ESC backs out or quits;
+Backspace edits text fields. In the scrolling satellite lists, Left/Right page
+up/down.
+
+## Downloading elements over WiFi (optional)
+Menu item **D** downloads the AMSAT GP bulletin without a PC or SD card, but it
+only works on the WiFi-capable firmware:
+
+1. Use a **Raspberry Pi Pico W or Pico 2 W** (the wireless boards) running the
+   **WebMite** firmware (the WiFi build of PicoMite). The plain PicoMite on a
+   non-W Pico has no network commands, and the feature degrades gracefully there.
+2. Configure WiFi once at the MMBasic console:
+   `OPTION WIFI "your-ssid", "your-password"` then reboot. Confirm with
+   `PRINT MM.INFO$(IP ADDRESS)` — you should see an address.
+3. In SATTRACK, choose **D**. It connects to `newark192.amsat.org` over HTTPS,
+   saves the bulletin to `B:/amsat.json`, and imports it (up to the 200-sat
+   limit). The file is also left on the card so you have an offline copy.
+
+Notes and caveats:
+- The exact `WEB`/TLS command names have evolved across firmware versions. This
+  uses `WEB OPEN TLS` / `WEB TCP REQUEST`, which match recent WebMite builds; if
+  your firmware differs, the network portion of `SUB DownloadAMSAT` is the part to
+  adjust (the parsing and storage around it are unchanged).
+- If your build lacks a TLS client, point the host at an HTTP mirror and use
+  `WEB OPEN TCP` on port 80 instead.
+- The response buffer is sized for the ~60-90 KB amateur bulletin. On a RAM-tight
+  board, fetch the smaller Celestrak amateur GP feed or use the SD import.
 
 ## Performance notes
 This is an interpreter on a microcontroller. Pass searches step at 30-second

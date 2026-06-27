@@ -200,9 +200,11 @@ def project(latr, lonr):
         rho = (PI / 2 + latr)
         theta = -lonr
     r = rho / (PI / 2)
-    # East is counterclockwise when looking down on the north pole, so the
-    # x term is subtracted (a +sin here mirrors the map east-west).
-    px = int(CX - r * RR * math.sin(theta) + 0.5)
+    # Map is viewed from above the pole (the standard OSCARLOCATOR look), so
+    # east longitude must sweep to the right of the prime meridian. The screen
+    # y-axis points down, so we use +sin for x (a -sin here would mirror the
+    # map east-west) and -cos for y (putting lon 0 at the top).
+    px = int(CX + r * RR * math.sin(theta) + 0.5)
     py = int(CY - r * RR * math.cos(theta) + 0.5)
     ok = 1 if rho <= PI / 2 else 0
     return px, py, ok

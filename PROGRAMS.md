@@ -95,7 +95,7 @@ by the per-orbit advance.
 to the SD card. File: `mmbasic/SATTRACK.bas`. Full guide:
 `mmbasic/SATTRACK-README.md`.
 
-**Menu (13 items):**
+**Menu (14 items):**
 1. **Set location / date / time (UTC)** — Maidenhead grid or lat/lon; clock from
    the PicoCalc RTC or by hand. Saved to `B:/loc.dat`.
 2. **Edit satellites** — up to **200**, each with six elements, epoch, and optional
@@ -134,12 +134,18 @@ B. **Pass detail** — the next pass's elevation-versus-time curve, coloured gre
    AOS / TCA / LOS / max-elevation readout.
 C. **Sun position** — a live sky dial of the Sun's azimuth and elevation from your
    station, plus the subsolar latitude/longitude.
+D. **Download AMSAT GP (WiFi)** — fetches the AMSAT daily bulletin
+   (`daily-bulletin.json`) over HTTPS, saves it to `B:/amsat.json`, and imports it
+   with the same parser as the SD load. Requires the WiFi build of MMBasic
+   (WebMite) on a Pico W / Pico 2 W with WiFi configured; on a non-WiFi PicoMite it
+   detects the absence of networking and points you to the SD import instead of
+   failing. See `mmbasic/SATTRACK-README.md` for the WiFi setup steps and caveats.
 
 **Install:** copy `SATTRACK.bas` to SD (drive **B:**); optionally copy
 `sats.dat.sample` to `B:/sats.dat` for a starter set (AO-7, AO-27, FO-29, ISS,
 SO-50), and a `tle.txt` / OMM JSON file for menu 3. At the MMBasic prompt:
 `RUN "B:/SATTRACK.bas"`. Navigate with arrow keys + Enter or the shortcut keys
-1-9, 0, and A-C; ESC backs out / quits. Your elements and location reload
+1-9, 0, and A-D; ESC backs out / quits. Your elements and location reload
 automatically next launch.
 
 ---
@@ -389,7 +395,7 @@ native-BASIC tools use short `O`-prefixed names (e.g. `OORBDAT`, `OGRID`).
 
 ### Graphical applications
 
-- **SATTRACK** — the PicoCalc's thirteen-view application (MMBasic): location/RTC,
+- **SATTRACK** — the PicoCalc's fourteen-view application (MMBasic): location/RTC,
   satellite editor (up to 200 sats, scrolling), TLE/JSON import, pass lists, polar
   plot, live Doppler track, all-sats schedule, world map with terminator, pass
   ground-track preview, the OSCARLOCATOR view, plus the CardSat-inspired pass watch

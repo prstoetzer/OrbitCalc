@@ -114,7 +114,7 @@ END
 ' ============================================================
 '  MENU SYSTEM
 ' ============================================================
-CONST NMENU = 13
+CONST NMENU = 14
 
 SUB MainMenu
   LOCAL sel
@@ -133,6 +133,7 @@ SUB MainMenu
     IF k = ASC("A") THEN CALL RunItem(11)
     IF k = ASC("B") THEN CALL RunItem(12)
     IF k = ASC("C") THEN CALL RunItem(13)
+    IF k = ASC("D") THEN CALL RunItem(14)
   LOOP UNTIL k = 27                    ' ESC quits
   CLS
   PRINT "Bye."
@@ -158,6 +159,7 @@ SUB DrawMenu(sel AS INTEGER)
   m$(11) = "A Pass watch + AOS alarm"
   m$(12) = "B Pass detail (el plot)"
   m$(13) = "C Sun position + glyph"
+  m$(14) = "D Download AMSAT GP (WiFi)"
   vis = (SH - 64) \ 18
   IF vis > NMENU THEN vis = NMENU
   top = 1
@@ -207,6 +209,7 @@ SUB RunItem(n AS INTEGER)
     CASE 11 : CALL PassWatch
     CASE 12 : CALL PassDetail
     CASE 13 : CALL SunView
+    CASE 14 : CALL DownloadAMSAT
   END SELECT
 END SUB
 
@@ -403,6 +406,111 @@ SUB LoadFromSD
   ENDIF
   CALL SaveSats
   CALL Flash(STR$(added) + " loaded, " + STR$(NSAT) + " total")
+END SUB
+
+' ============================================================
+'  14) DOWNLOAD AMSAT GP OVER WiFi  (WebMite firmware only)
+'  Fetches the AMSAT daily bulletin (OMM/JSON) over HTTPS, writes it to
+'  B:/amsat.json, and parses it with the same LoadJSON() used for SD files.
+'
+'  This needs the WiFi build of MMBasic (WebMite, on a Pico W / Pico 2 W)
+'  with WiFi already configured via OPTION WIFI ssid$,pwd$ at the console.
+'  On a non-WiFi PicoMite the WEB commands don't exist, so the whole
+'  routine is guarded: if the network path fails for any reason it falls
+'  back to telling the user to use the SD-card import (menu 3) instead.
+'
+'  The bulletin is HTTPS, so this uses WEB OPEN TLS (port 443). If your
+'  firmware predates the TLS client, point HOST at an http mirror and use
+'  WEB OPEN TCP / port 80 instead (see SATTRACK-README).
+' ============================================================
+SUB DownloadAMSAT
+  LOCAL host$, path$, req$, outp$
+  LOCAL INTEGER okwifi, cb, n, bodystart, fo, added
+  CLS CBG
+  CALL Header("Download AMSAT GP")
+  host$ = "newark192.amsat.org"
+  path$ = "/gpdata/current/daily-bulletin.json"
+  outp$ = "B:/amsat.json"
+  ' --- check that this firmware has WiFi and an IP address ---
+  ' On a non-WiFi PicoMite, MM.INFO(IP ADDRESS) errors or returns empty; the
+  ' ON ERROR SKIP keeps us from crashing either way.
+  okwifi = 0
+  ON ERROR SKIP 2
+  IF MM.INFO$(IP ADDRESS) <> "" THEN okwifi = 1
+  ON ERROR CLEAR
+  IF okwifi = 0 THEN
+    TEXT 4, 26, "WiFi not available / not", "L", 7, 1, CWARN
+    TEXT 4, 40, "connected on this firmware.", "L", 7, 1, CFG
+    TEXT 4, 54, "Use menu 3 to load from SD", "L", 7, 1, CFG
+    TEXT 4, 68, "(save amsat.json on the card).", "L", 7, 1, CFG
+    TEXT 4, 82, "Needs WebMite on a Pico W.", "L", 7, 1, CGRID
+    TEXT 4, SH - 14, "Any key", "L", 7, 1, CGRID
+    CALL WaitKey$()
+    EXIT SUB
+  ENDIF
+  TEXT 4, 26, "Connecting to AMSAT...", "L", 7, 1, CFG
+  ' --- buffer for the response. The amateur bulletin is ~60-90 KB, so this
+  '     allocates ~128 KB (16384 ints x 8). If your board is tight on RAM,
+  '     fetch the smaller Celestrak amateur GP feed instead, or use SD. ---
+  LOCAL INTEGER buf%(16384)
+  LONGSTRING CLEAR buf%()
+  ' --- HTTPS GET ---
+  req$ = "GET " + path$ + " HTTP/1.1" + CHR$(13) + CHR$(10)
+  req$ = req$ + "Host: " + host$ + CHR$(13) + CHR$(10)
+  req$ = req$ + "User-Agent: SATTRACK-PicoCalc" + CHR$(13) + CHR$(10)
+  req$ = req$ + "Connection: close" + CHR$(13) + CHR$(10)
+  req$ = req$ + CHR$(13) + CHR$(10)
+  cb = 0
+  ON ERROR SKIP
+  WEB OPEN TLS host$, 443, cb
+  IF MM.ERRNO <> 0 THEN
+    ON ERROR CLEAR
+    TEXT 4, 40, "Connect failed. Check WiFi", "L", 7, 1, CWARN
+    TEXT 4, 54, "and that TLS is supported.", "L", 7, 1, CFG
+    TEXT 4, SH - 14, "Any key", "L", 7, 1, CGRID
+    CALL WaitKey$()
+    EXIT SUB
+  ENDIF
+  ON ERROR CLEAR
+  WEB TCP REQUEST cb, req$, buf%(), 12000
+  WEB CLOSE cb
+  ' --- strip HTTP headers: find the blank line (CRLFCRLF) ---
+  bodystart = LINSTR(buf%(), CHR$(13) + CHR$(10) + CHR$(13) + CHR$(10))
+  ' write the body to a file, then reuse the file parser
+  fo = 3
+  OPEN outp$ FOR OUTPUT AS #fo
+  CALL WriteBody(fo, buf%(), bodystart)
+  CLOSE #fo
+  TEXT 4, 40, "Saved. Parsing...", "L", 7, 1, CFG
+  added = LoadJSON(outp$)
+  CALL SaveSats
+  CALL Flash(STR$(added) + " loaded, " + STR$(NSAT) + " total")
+END SUB
+
+' Write the JSON body (everything after the HTTP header break) of a long
+' string out to an already-open file handle, one line at a time. Uses only
+' the well-documented long-string functions LLEN / LGETBYTE.
+SUB WriteBody(fo AS INTEGER, buf%(), bodystart AS INTEGER)
+  LOCAL line$
+  LOCAL INTEGER total, i, ch, start
+  total = LLEN(buf%())
+  start = bodystart + 4                 ' skip the CRLFCRLF
+  IF bodystart <= 0 THEN start = 1      ' no header found: write all
+  line$ = ""
+  i = start
+  DO WHILE i <= total
+    ch = LGETBYTE(buf%(), i)
+    IF ch = 10 THEN
+      PRINT #fo, line$
+      line$ = ""
+    ELSEIF ch <> 13 THEN
+      line$ = line$ + CHR$(ch)
+      ' guard against MMBasic's 255-char string limit on a pathological line
+      IF LEN(line$) >= 250 THEN PRINT #fo, line$ : line$ = ""
+    ENDIF
+    i = i + 1
+  LOOP
+  IF LEN(line$) > 0 THEN PRINT #fo, line$
 END SUB
 
 ' Parse a NORAD TLE / 3LE text file. Returns the count added.
@@ -1331,7 +1439,9 @@ SUB OVProject(latr, lonr)
       rho = (PI / 2 + latr) : theta = -lonr
     ENDIF
     rr2 = rho / (PI / 2)
-    OVPX = OVCX - rr2 * OVRR * SIN(theta)
+    ' Viewed from above the pole: east sweeps right of the prime meridian.
+    ' +SIN (a -SIN would mirror the map east-west); screen y is down so -COS.
+    OVPX = OVCX + rr2 * OVRR * SIN(theta)
     OVPY = OVCY - rr2 * OVRR * COS(theta)
     IF rho > PI / 2 THEN OVPOK = 0 ELSE OVPOK = 1
   ELSE

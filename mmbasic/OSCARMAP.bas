@@ -132,9 +132,10 @@ SUB Project(latr, lonr)
     theta = -lonr
   ENDIF
   r = rho / (PI / 2)             ' 0 at pole, 1 at equator (rim)
-  ' East is counterclockwise looking down on the N pole, so subtract the
-  ' x term (a +SIN here mirrors the map east-west).
-  PJX = CX - r * RR * SIN(theta)
+  ' Viewed from above the pole (standard OSCARLOCATOR look): east longitude
+  ' sweeps to the right of the prime meridian. Screen y is down, so use +SIN
+  ' for x (a -SIN here would mirror the map east-west) and -COS for y.
+  PJX = CX + r * RR * SIN(theta)
   PJY = CY - r * RR * COS(theta)
   ' single-hemisphere board: clip anything past the equator
   IF rho > PI / 2 THEN PJOK = 0 ELSE PJOK = 1
@@ -198,8 +199,8 @@ SUB DrawGraticule
   NEXT i
   ' longitude spokes: from near the pole out to the equator rim
   IF NHEMI = 1 THEN nearlat = 80 ELSE nearlat = -80
+  LOCAL px0, py0
   FOR i = 0 TO 330 STEP 30
-    LOCAL px0, py0
     CALL Project(nearlat * DEG, i * DEG)
     px0 = PJX : py0 = PJY
     CALL Project(0, i * DEG)              ' equator end
